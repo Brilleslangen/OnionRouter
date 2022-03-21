@@ -46,7 +46,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		t, _ := template.ParseFiles("../html/blank.html")
 		err = t.Execute(w, nil)
 		check(err)
-		
+
 		// Print to client
 		defer func() {
 			err = resp.Body.Close()
@@ -83,7 +83,7 @@ func sendThroughNodes(url string) *http.Response {
 	check(err)
 	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 
-	// Initiate http request and collect response
+	// Initiate http-request and collect response
 	client := http.Client{}
 	resp, err := client.Do(request)
 	check(err)

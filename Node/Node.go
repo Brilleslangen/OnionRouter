@@ -38,16 +38,21 @@ func main() {
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
-		fmt.Println(r.Header)
+		fmt.Println("New POST-request from " + r.RemoteAddr)
+
+		// Allocate payload struct, then decode and write response body into it.
 		var payload Payload
 		decoder := json.NewDecoder(r.Body)
 		err := decoder.Decode(&payload)
 		check(err)
+
+		// Get site which is requested
 		resp, err := http.Get(payload.Payload)
 		if err != nil {
 			log.Fatalln(err)
 		}
 
+		// Forward response from origin-url to client.
 		_, err = io.Copy(w, resp.Body)
 		check(err)
 	} else {
