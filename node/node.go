@@ -25,7 +25,7 @@ func main() {
 	check(err)
 
 	if response.Status == "200 OK" {
-		fmt.Println("Connected to TOR-nexus")
+		fmt.Println("Connected to router")
 	}
 
 	// Start listening for requests
