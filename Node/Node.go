@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -15,8 +16,21 @@ type Payload struct {
 }
 
 func main() {
+	// Alert OR client that this node i active
+	request, err := http.NewRequest("POST", "http://127.0.0.1:8080/connect", bytes.NewBuffer([]byte("KEY VALUE")))
+	request.Header.Set("Content-Type", "text/plain; charset=UTF-8")
+
+	client := http.Client{}
+	response, err := client.Do(request)
+	check(err)
+
+	if response.Status == "200 OK" {
+		fmt.Println("Connected to TOR-nexus")
+	}
+
+	// Start listening for requests
 	http.HandleFunc("/", handler)
-	err := http.ListenAndServe(":8081", nil)
+	err = http.ListenAndServe(":8081", nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}

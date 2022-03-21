@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"io"
 	"log"
@@ -14,7 +15,14 @@ type Payload struct {
 	Payload  string
 }
 
+var nodes map[string]string
+
 func main() {
+	// Initiate map to hold nodes
+	nodes = make(map[string]string)
+
+	// Set handlers
+	http.HandleFunc("/connect", connectNode)
 	http.HandleFunc("/", handler)
 	err := http.ListenAndServe(":8080", nil) // setting listening port
 	if err != nil {
@@ -23,7 +31,6 @@ func main() {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	//fmt.Println("method:", r.Method)
 	if r.Method == "GET" {
 		t, _ := template.ParseFiles("../html/index.html")
 		err := t.Execute(w, nil)
@@ -34,19 +41,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 		linkAddress := r.Form["code"][0]
 
-		/*
-			resp, err := http.Get("https://" + linkAddress)
-			if err != nil {
-				log.Fatalln(err)
-			}
-		*/
-
 		resp := sendThroughNodes("https://" + linkAddress)
 
 		t, _ := template.ParseFiles("../html/blank.html")
 		err = t.Execute(w, nil)
 		check(err)
-
+		
 		// Print to client
 		defer func() {
 			err = resp.Body.Close()
@@ -54,6 +54,19 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		}()
 		_, err = io.Copy(w, resp.Body)
 		check(err)
+	}
+}
+
+func connectNode(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		// Extract address and key
+		nodeAddress := r.RemoteAddr
+		encryptionKey, err := io.ReadAll(r.Body)
+		check(err)
+		fmt.Println("Address: ", nodeAddress, " Key: "+string(encryptionKey))
+
+		// Add to available nodes
+		nodes[nodeAddress] = string(encryptionKey)
 	}
 }
 
@@ -80,6 +93,6 @@ func sendThroughNodes(url string) *http.Response {
 
 func check(err error) {
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
 }
