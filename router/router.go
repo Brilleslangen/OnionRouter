@@ -2,47 +2,22 @@ package main
 
 import (
 	"bytes"
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	random "crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	. "github.com/Brilleslangen/OnionRouter/ecdh"
+	. "github.com/Brilleslangen/OnionRouter/orstructs"
 	"html/template"
 	"io"
 	"log"
-	"math/big"
 	"math/rand"
 	"net"
 	"net/http"
 	"reflect"
 )
-
-type Payload struct {
-	NextNode []byte
-	Payload  []byte
-}
-
-type Node struct {
-	IP           string
-	Port         string
-	PublicKeyX   string
-	PublicKeyY   string
-	SharedSecret [32]byte
-}
-
-type KeyResponse struct {
-	X string `json:"x"`
-	Y string `json:"y"`
-}
-
-func (node *Node) address() string {
-	return node.IP + ":" + node.Port
-}
 
 var nodes []Node
 var routerKey *ecdsa.PrivateKey
@@ -92,7 +67,7 @@ func connectNode(w http.ResponseWriter, r *http.Request) {
 		check(err)
 		node.IP = ip
 
-		node.SharedSecret = establishSharedSecret(node)
+		node.SharedSecret = EstablishSharedSecret(node, routerKey)
 		fmt.Printf("\n IP: %x \n Port: %x \n PublicKey: (%x,%x) \n Shared Secret: %x", ip, node.Port, node.PublicKeyX, node.PublicKeyY, node.SharedSecret)
 		x := routerKey.X.Text(10)
 		y := routerKey.Y.Text(10)
@@ -153,53 +128,16 @@ func selectAndPack(url string) ([3]Node, Payload, error) {
 		// Convert previous payload to a JSON string and pack into new payload
 		jsonPayload, err := json.Marshal(currentPayload)
 		check(err)
-		encryptedPayload, _ := encrypt(selectedNodes[i].SharedSecret[:], jsonPayload)
-		currentPayload = Payload{[]byte(selectedNodes[i].address()), encryptedPayload}
+		encryptedPayload, _ := Encrypt(selectedNodes[i].SharedSecret[:], jsonPayload)
+		currentPayload = Payload{[]byte(selectedNodes[i].Address()), encryptedPayload}
 	}
 
 	// Pack final payload to be sent from this entity
 	jsonFinal, err := json.Marshal(currentPayload)
 	check(err)
-	encryptedPayload, _ := encrypt(selectedNodes[2].SharedSecret[:], jsonFinal)
+	encryptedPayload, _ := Encrypt(selectedNodes[2].SharedSecret[:], jsonFinal)
 
-	return selectedNodes, Payload{[]byte(selectedNodes[2].address()), encryptedPayload}, nil
-}
-
-func establishSharedSecret(node Node) [32]byte {
-	x, _ := new(big.Int).SetString(node.PublicKeyX, 10)
-	y, _ := new(big.Int).SetString(node.PublicKeyY, 10)
-	a, _ := routerKey.PublicKey.Curve.ScalarMult(x, y, routerKey.D.Bytes())
-	sharedSecret := sha256.Sum256(a.Bytes())
-
-	return sharedSecret
-}
-func encode(in []byte) string {
-	return base64.StdEncoding.EncodeToString(in)
-}
-
-func encrypt(key []byte, in []byte) ([]byte, error) {
-	block, err := aes.NewCipher(key)
-	check(err)
-	cfb := cipher.NewCFBEncrypter(block, in)
-	cipherText := make([]byte, len(in))
-	cfb.XORKeyStream(cipherText, in)
-	return []byte(encode(cipherText)), nil
-}
-
-func decode(in []byte) []byte {
-	decoded, err := base64.StdEncoding.DecodeString(string(in))
-	check(err)
-	return decoded
-}
-
-func decrypt(key []byte, in []byte) ([]byte, error) {
-	block, err := aes.NewCipher(key)
-	check(err)
-	cipherText := decode(in)
-	cfb := cipher.NewCFBEncrypter(block, in)
-	text := make([]byte, len(cipherText))
-	cfb.XORKeyStream(text, cipherText)
-	return text, nil
+	return selectedNodes, Payload{[]byte(selectedNodes[2].Address()), encryptedPayload}, nil
 }
 
 func unpack(respBody io.ReadCloser, selectedNodes [3]Node) io.ReadCloser {
@@ -209,7 +147,7 @@ func unpack(respBody io.ReadCloser, selectedNodes [3]Node) io.ReadCloser {
 		check(err)
 
 		// Decrypt bytes
-		decryptedBody, err := decrypt(selectedNodes[i].SharedSecret[:], encryptedBody)
+		decryptedBody, err := Decrypt(selectedNodes[i].SharedSecret[:], encryptedBody)
 
 		// Convert decrypted bytes to JSON
 		err = json.Unmarshal(decryptedBody, &respBody)

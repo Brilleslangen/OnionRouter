@@ -12,3 +12,7 @@ type Node struct {
 	PublicKeyY   string
 	SharedSecret [32]byte
 }
+
+func (node *Node) Address() string {
+	return node.IP + ":" + node.Port
+}

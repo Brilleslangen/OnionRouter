@@ -3,8 +3,10 @@ package ecdh
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/base64"
+	. "github.com/Brilleslangen/OnionRouter/orstructs"
 	"math/big"
 )
 
@@ -13,7 +15,7 @@ type KeyResponse struct {
 	Y string `json:"y"`
 }
 
-func establishSharedSecret(node Node) [32]byte {
+func EstablishSharedSecret(node Node, routerKey *ecdsa.PrivateKey) [32]byte {
 	x, _ := new(big.Int).SetString(node.PublicKeyX, 10)
 	y, _ := new(big.Int).SetString(node.PublicKeyY, 10)
 	a, _ := routerKey.PublicKey.Curve.ScalarMult(x, y, routerKey.D.Bytes())
@@ -22,29 +24,29 @@ func establishSharedSecret(node Node) [32]byte {
 	return sharedSecret
 }
 
-func encode(in []byte) string {
+func Encode(in []byte) string {
 	return base64.StdEncoding.EncodeToString(in)
 }
 
-func encrypt(key []byte, in []byte) ([]byte, error) {
+func Encrypt(key []byte, in []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	check(err)
 	cfb := cipher.NewCFBEncrypter(block, in)
 	cipherText := make([]byte, len(in))
 	cfb.XORKeyStream(cipherText, in)
-	return []byte(encode(cipherText)), nil
+	return []byte(Encode(cipherText)), nil
 }
 
-func decode(in []byte) []byte {
+func Decode(in []byte) []byte {
 	decoded, err := base64.StdEncoding.DecodeString(string(in))
 	check(err)
 	return decoded
 }
 
-func decrypt(key []byte, in []byte) ([]byte, error) {
+func Decrypt(key []byte, in []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	check(err)
-	cipherText := decode(in)
+	cipherText := Decode(in)
 	cfb := cipher.NewCFBEncrypter(block, in)
 	text := make([]byte, len(cipherText))
 	cfb.XORKeyStream(text, cipherText)
