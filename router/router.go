@@ -2,10 +2,13 @@ package main
 
 import (
 	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	random "crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,7 +23,7 @@ import (
 )
 
 type Payload struct {
-	NextNode string
+	NextNode []byte
 	Payload  []byte
 }
 
@@ -33,8 +36,8 @@ type Node struct {
 }
 
 type KeyResponse struct {
-	x string
-	y string
+	X string `json:"x"`
+	Y string `json:"y"`
 }
 
 func (node *Node) address() string {
@@ -42,9 +45,10 @@ func (node *Node) address() string {
 }
 
 var nodes []Node
-var routerKey, _ = ecdsa.GenerateKey(elliptic.P256(), random.Reader)
+var routerKey *ecdsa.PrivateKey
 
 func main() {
+
 	// Set handlers
 	http.HandleFunc("/connect", connectNode)
 	http.HandleFunc("/", handler)
@@ -79,6 +83,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 func connectNode(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
+		routerKey, _ = ecdsa.GenerateKey(elliptic.P256(), random.Reader)
 		// Extract IP-address and key
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		var node Node
@@ -89,8 +94,11 @@ func connectNode(w http.ResponseWriter, r *http.Request) {
 
 		node.SharedSecret = establishSharedSecret(node)
 		fmt.Printf("\n IP: %x \n Port: %x \n PublicKey: (%x,%x) \n Shared Secret: %x", ip, node.Port, node.PublicKeyX, node.PublicKeyY, node.SharedSecret)
-		jsonDetails, err := json.Marshal(KeyResponse{routerKey.X.Text(16), routerKey.Y.Text(16)})
-		w.Header().Set("Content-Type", "application/json")
+		x := routerKey.X.Text(10)
+		y := routerKey.Y.Text(10)
+		response := KeyResponse{X: x, Y: y}
+		jsonDetails, err := json.Marshal(response)
+		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		_, err = w.Write(jsonDetails)
 		check(err)
 
@@ -101,10 +109,10 @@ func connectNode(w http.ResponseWriter, r *http.Request) {
 
 func sendThroughNodes(url string) *http.Response {
 	// Select random nodes and pack payload in encrypted layers
-	payload, err := selectAndPack(url)
+	selectedNodes, payload, err := selectAndPack(url)
 
 	// Create request
-	request, err := http.NewRequest("POST", "http://"+payload.NextNode, bytes.NewBuffer(payload.Payload))
+	request, err := http.NewRequest("POST", "http://"+string(payload.NextNode), bytes.NewBuffer(payload.Payload))
 	check(err)
 	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 
@@ -113,15 +121,18 @@ func sendThroughNodes(url string) *http.Response {
 	resp, err := client.Do(request)
 	check(err)
 
+	// Unpack decryption layers and replace response body
+	resp.Body = unpack(resp.Body, selectedNodes)
+
 	return resp
 }
 
-func selectAndPack(url string) (Payload, error) {
+func selectAndPack(url string) ([3]Node, Payload, error) {
 	var selectedNodes [3]Node
 
 	// Ensure there are at least three nodes to traverse
 	if len(nodes) < 3 {
-		return Payload{}, errors.New("there has to be at least three nodes connected")
+		return selectedNodes, Payload{}, errors.New("there has to be at least three nodes connected")
 	}
 
 	// Randomly select three unique nodes
@@ -137,28 +148,73 @@ func selectAndPack(url string) (Payload, error) {
 	}
 
 	// Recursively pack payload
-	currentPayload := Payload{"", []byte(url)}
+	currentPayload := Payload{[]byte(""), []byte(url)}
 	for i := 0; i < 2; i++ {
 		// Convert previous payload to a JSON string and pack into new payload
 		jsonPayload, err := json.Marshal(currentPayload)
 		check(err)
-		currentPayload = Payload{selectedNodes[i].address(), jsonPayload}
+		encryptedPayload, _ := encrypt(selectedNodes[i].SharedSecret[:], jsonPayload)
+		currentPayload = Payload{[]byte(selectedNodes[i].address()), encryptedPayload}
 	}
 
 	// Pack final payload to be sent from this entity
 	jsonFinal, err := json.Marshal(currentPayload)
 	check(err)
+	encryptedPayload, _ := encrypt(selectedNodes[2].SharedSecret[:], jsonFinal)
 
-	return Payload{selectedNodes[2].address(), jsonFinal}, nil
+	return selectedNodes, Payload{[]byte(selectedNodes[2].address()), encryptedPayload}, nil
 }
 
 func establishSharedSecret(node Node) [32]byte {
-	x, _ := new(big.Int).SetString(node.PublicKeyX, 16)
-	y, _ := new(big.Int).SetString(node.PublicKeyY, 16)
+	x, _ := new(big.Int).SetString(node.PublicKeyX, 10)
+	y, _ := new(big.Int).SetString(node.PublicKeyY, 10)
 	a, _ := routerKey.PublicKey.Curve.ScalarMult(x, y, routerKey.D.Bytes())
 	sharedSecret := sha256.Sum256(a.Bytes())
 
 	return sharedSecret
+}
+func encode(in []byte) string {
+	return base64.StdEncoding.EncodeToString(in)
+}
+
+func encrypt(key []byte, in []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	check(err)
+	cfb := cipher.NewCFBEncrypter(block, in)
+	cipherText := make([]byte, len(in))
+	cfb.XORKeyStream(cipherText, in)
+	return []byte(encode(cipherText)), nil
+}
+
+func decode(in []byte) []byte {
+	decoded, err := base64.StdEncoding.DecodeString(string(in))
+	check(err)
+	return decoded
+}
+
+func decrypt(key []byte, in []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	check(err)
+	cipherText := decode(in)
+	cfb := cipher.NewCFBEncrypter(block, in)
+	text := make([]byte, len(cipherText))
+	cfb.XORKeyStream(text, cipherText)
+	return text, nil
+}
+
+func unpack(respBody io.ReadCloser, selectedNodes [3]Node) io.ReadCloser {
+	for i := 2; i < 0; i-- {
+		// Convert from io.ReadCloser to encrypted bytes
+		encryptedBody, err := io.ReadAll(respBody)
+		check(err)
+
+		// Decrypt bytes
+		decryptedBody, err := decrypt(selectedNodes[i].SharedSecret[:], encryptedBody)
+
+		// Convert decrypted bytes to JSON
+		err = json.Unmarshal(decryptedBody, &respBody)
+	}
+	return respBody
 }
 
 func check(err error) {
