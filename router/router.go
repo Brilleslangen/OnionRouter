@@ -2,15 +2,21 @@ package main
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	random "crypto/rand"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
 	"io"
 	"log"
+	"math/big"
 	"math/rand"
 	"net"
 	"net/http"
+	"reflect"
 )
 
 type Payload struct {
@@ -19,9 +25,16 @@ type Payload struct {
 }
 
 type Node struct {
-	IP        string
-	Port      string
-	PublicKey string
+	IP           string
+	Port         string
+	PublicKeyX   string
+	PublicKeyY   string
+	SharedSecret [32]byte
+}
+
+type KeyResponse struct {
+	x string
+	y string
 }
 
 func (node *Node) address() string {
@@ -29,6 +42,7 @@ func (node *Node) address() string {
 }
 
 var nodes []Node
+var routerKey, _ = ecdsa.GenerateKey(elliptic.P256(), random.Reader)
 
 func main() {
 	// Set handlers
@@ -72,7 +86,13 @@ func connectNode(w http.ResponseWriter, r *http.Request) {
 		err = decoder.Decode(&node)
 		check(err)
 		node.IP = ip
-		fmt.Println("IP:", node.IP, " Port:", node.Port, " PublicKey:"+node.PublicKey)
+
+		node.SharedSecret = establishSharedSecret(node)
+		fmt.Printf("\n IP: %x \n Port: %x \n PublicKey: (%x,%x) \n Shared Secret: %x", ip, node.Port, node.PublicKeyX, node.PublicKeyY, node.SharedSecret)
+		jsonDetails, err := json.Marshal(KeyResponse{routerKey.X.Text(16), routerKey.Y.Text(16)})
+		w.Header().Set("Content-Type", "application/json")
+		_, err = w.Write(jsonDetails)
+		check(err)
 
 		// Add to available nodes
 		nodes = append(nodes, node)
@@ -108,7 +128,7 @@ func selectAndPack(url string) (Payload, error) {
 	for i := 0; i < 3; i++ {
 		currentNode := nodes[rand.Intn(len(nodes))]
 		for _, prevNode := range selectedNodes {
-			if currentNode == prevNode {
+			if reflect.DeepEqual(currentNode, prevNode) {
 				i--
 				continue
 			}
@@ -130,6 +150,15 @@ func selectAndPack(url string) (Payload, error) {
 	check(err)
 
 	return Payload{selectedNodes[2].address(), jsonFinal}, nil
+}
+
+func establishSharedSecret(node Node) [32]byte {
+	x, _ := new(big.Int).SetString(node.PublicKeyX, 16)
+	y, _ := new(big.Int).SetString(node.PublicKeyY, 16)
+	a, _ := routerKey.PublicKey.Curve.ScalarMult(x, y, routerKey.D.Bytes())
+	sharedSecret := sha256.Sum256(a.Bytes())
+
+	return sharedSecret
 }
 
 func check(err error) {
