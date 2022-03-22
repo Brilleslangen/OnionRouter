@@ -2,10 +2,13 @@ package main
 
 import (
 	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -29,16 +32,22 @@ type NodeDetails struct {
 }
 
 type KeyResponse struct {
-	x string
-	y string
+	X string `json:"x"`
+	Y string `json:"y"`
 }
 
-var nodeKey, _ = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+var nodeKey *ecdsa.PrivateKey
 var SharedSecret [32]byte
 
 func main() {
+
+	// Initialize keypair in the node
+	nodeKey, _ = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	PORT := "8088"
+
+	// Dummy array to pass into the JSON
 	dummyArr := new([32]byte)
+
 	// Alert router that this node is active
 	jsonDetails, err := json.Marshal(NodeDetails{"TBD", PORT, nodeKey.X.Text(10), nodeKey.Y.Text(10), *dummyArr})
 	check(err)
@@ -46,9 +55,12 @@ func main() {
 	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	client := http.Client{}
 	response, err := client.Do(request)
+
+	// Response from the router contains the routers public key
 	var keyResponse KeyResponse
 	decoder := json.NewDecoder(response.Body)
 	err = decoder.Decode(&keyResponse)
+	check(err)
 	SharedSecret = getSharedSecret(keyResponse)
 	fmt.Println(SharedSecret)
 	check(err)
@@ -75,6 +87,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		err := decoder.Decode(&payload)
 		check(err)
 
+		//Decrypt payload
+		payload = decrypt()
 		// Execute request if last node or send to next node
 		var resp *http.Response
 		if payload.NextNode == "" {
@@ -105,12 +119,41 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getSharedSecret(response KeyResponse) [32]byte {
-	x, _ := new(big.Int).SetString(response.x, 16)
-	y, _ := new(big.Int).SetString(response.y, 16)
+	x, _ := new(big.Int).SetString(response.X, 10)
+	y, _ := new(big.Int).SetString(response.Y, 10)
 	a, _ := nodeKey.PublicKey.Curve.ScalarMult(x, y, nodeKey.D.Bytes())
 	sharedSecret := sha256.Sum256(a.Bytes())
 
 	return sharedSecret
+}
+
+func encode(in []byte) string {
+	return base64.StdEncoding.EncodeToString(in)
+}
+
+func encrypt(key []byte, in []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	check(err)
+	cfb := cipher.NewCFBEncrypter(block, in)
+	cipherText := make([]byte, len(in))
+	cfb.XORKeyStream(cipherText, in)
+	return []byte(encode(cipherText)), nil
+}
+
+func decode(in []byte) []byte {
+	decoded, err := base64.StdEncoding.DecodeString(string(in))
+	check(err)
+	return decoded
+}
+
+func decrypt(key []byte, in []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	check(err)
+	cipherText := decode(in)
+	cfb := cipher.NewCFBEncrypter(block, in)
+	text := make([]byte, len(cipherText))
+	cfb.XORKeyStream(text, cipherText)
+	return text, nil
 }
 
 func check(err error) {
