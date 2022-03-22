@@ -23,33 +23,34 @@ type Payload struct {
 type NodeDetails struct {
 	IP           string
 	Port         string
-	PublicKeyX   big.Int
-	PublicKeyY   big.Int
+	PublicKeyX   string
+	PublicKeyY   string
 	SharedSecret [32]byte
 }
 
 type KeyResponse struct {
-	x big.Int
-	y big.Int
+	x string
+	y string
 }
+
+var nodeKey, _ = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+var SharedSecret [32]byte
 
 func main() {
 	PORT := "8088"
-	pubKey, privKey := generateKey()
 	dummyArr := new([32]byte)
-	fmt.Println(pubKey)
 	// Alert router that this node is active
-	jsonDetails, err := json.Marshal(NodeDetails{"TBD", PORT, *pubKey.X, *pubKey.Y, *dummyArr})
+	jsonDetails, err := json.Marshal(NodeDetails{"TBD", PORT, nodeKey.X.Text(10), nodeKey.Y.Text(10), *dummyArr})
 	check(err)
 	request, err := http.NewRequest("POST", "http://127.0.0.1:8080/connect", bytes.NewBuffer(jsonDetails))
 	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	client := http.Client{}
 	response, err := client.Do(request)
 	var keyResponse KeyResponse
-	decoder := json.NewDecoder(request.Response.Body)
+	decoder := json.NewDecoder(response.Body)
 	err = decoder.Decode(&keyResponse)
-	sharedSecret := getSharedSecret(keyResponse, privKey)
-	fmt.Println(sharedSecret)
+	SharedSecret = getSharedSecret(keyResponse)
+	fmt.Println(SharedSecret)
 	check(err)
 
 	if response.Status == "200 OK" {
@@ -103,14 +104,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func generateKey() (ecdsa.PublicKey, big.Int) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	return key.PublicKey, *key.D
-}
-
-func getSharedSecret(response KeyResponse, privKey big.Int) [32]byte {
-	generator, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	a, _ := generator.Curve.ScalarMult(&response.y, &response.y, privKey.Bytes())
+func getSharedSecret(response KeyResponse) [32]byte {
+	x, _ := new(big.Int).SetString(response.x, 16)
+	y, _ := new(big.Int).SetString(response.y, 16)
+	a, _ := nodeKey.PublicKey.Curve.ScalarMult(x, y, nodeKey.D.Bytes())
 	sharedSecret := sha256.Sum256(a.Bytes())
 
 	return sharedSecret

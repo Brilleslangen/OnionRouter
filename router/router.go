@@ -16,6 +16,7 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"reflect"
 )
 
 type Payload struct {
@@ -26,13 +27,14 @@ type Payload struct {
 type Node struct {
 	IP           string
 	Port         string
-	PublicKey    ecdsa.PublicKey
+	PublicKeyX   string
+	PublicKeyY   string
 	SharedSecret [32]byte
 }
 
 type KeyResponse struct {
-	x big.Int
-	y big.Int
+	x string
+	y string
 }
 
 func (node *Node) address() string {
@@ -84,10 +86,9 @@ func connectNode(w http.ResponseWriter, r *http.Request) {
 		err = decoder.Decode(&node)
 		check(err)
 		node.IP = ip
-		fmt.Printf("IP: %x Port: %x PublicKey: (%x,%x)", ip, node.Port, node.PublicKey.X, node.PublicKey.Y)
 		node.SharedSecret = establishSharedSecret(node)
-		fmt.Println(node.SharedSecret)
-		jsonDetails, err := json.Marshal(KeyResponse{*routerKey.X, *routerKey.Y})
+		fmt.Printf("\n IP: %x \n Port: %x \n PublicKey: (%x,%x) \n Shared Secret: %x", ip, node.Port, node.PublicKeyX, node.PublicKeyY, node.SharedSecret)
+		jsonDetails, err := json.Marshal(KeyResponse{routerKey.X.Text(16), routerKey.Y.Text(16)})
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(jsonDetails)
 		check(err)
@@ -126,7 +127,7 @@ func selectAndPack(url string) (Payload, error) {
 	for i := 0; i < 3; i++ {
 		currentNode := nodes[rand.Intn(len(nodes))]
 		for _, prevNode := range selectedNodes {
-			if currentNode == prevNode {
+			if reflect.DeepEqual(currentNode, prevNode) {
 				i--
 				continue
 			}
@@ -151,7 +152,10 @@ func selectAndPack(url string) (Payload, error) {
 }
 
 func establishSharedSecret(node Node) [32]byte {
-	a, _ := node.PublicKey.Curve.ScalarMult(node.PublicKey.X, node.PublicKey.Y, routerKey.D.Bytes())
+	generator, _ := ecdsa.GenerateKey(elliptic.P256(), random.Reader)
+	x, _ := new(big.Int).SetString(node.PublicKeyX, 16)
+	y, _ := new(big.Int).SetString(node.PublicKeyY, 16)
+	a, _ := generator.PublicKey.Curve.ScalarMult(x, y, routerKey.D.Bytes())
 	sharedSecret := sha256.Sum256(a.Bytes())
 
 	return sharedSecret
