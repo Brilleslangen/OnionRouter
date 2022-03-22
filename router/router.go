@@ -2,12 +2,17 @@ package main
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	random "crypto/rand"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
 	"io"
 	"log"
+	"math/big"
 	"math/rand"
 	"net"
 	"net/http"
@@ -19,9 +24,15 @@ type Payload struct {
 }
 
 type Node struct {
-	IP        string
-	Port      string
-	PublicKey string
+	IP           string
+	Port         string
+	PublicKey    ecdsa.PublicKey
+	SharedSecret [32]byte
+}
+
+type KeyResponse struct {
+	x big.Int
+	y big.Int
 }
 
 func (node *Node) address() string {
@@ -29,6 +40,7 @@ func (node *Node) address() string {
 }
 
 var nodes []Node
+var routerKey, _ = ecdsa.GenerateKey(elliptic.P256(), random.Reader)
 
 func main() {
 	// Set handlers
@@ -72,7 +84,13 @@ func connectNode(w http.ResponseWriter, r *http.Request) {
 		err = decoder.Decode(&node)
 		check(err)
 		node.IP = ip
-		fmt.Println("IP: ", node.IP, " Port: ", node.Port, " PublicKey: "+node.PublicKey)
+		fmt.Printf("IP: %x Port: %x PublicKey: (%x,%x)", ip, node.Port, node.PublicKey.X, node.PublicKey.Y)
+		node.SharedSecret = establishSharedSecret(node)
+		fmt.Println(node.SharedSecret)
+		jsonDetails, err := json.Marshal(KeyResponse{*routerKey.X, *routerKey.Y})
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(jsonDetails)
+		check(err)
 
 		// Add to available nodes
 		nodes = append(nodes, node)
@@ -130,6 +148,13 @@ func selectAndPack(url string) (Payload, error) {
 	check(err)
 
 	return Payload{selectedNodes[2].address(), jsonFinal}, nil
+}
+
+func establishSharedSecret(node Node) [32]byte {
+	a, _ := node.PublicKey.Curve.ScalarMult(node.PublicKey.X, node.PublicKey.Y, routerKey.D.Bytes())
+	sharedSecret := sha256.Sum256(a.Bytes())
+
+	return sharedSecret
 }
 
 func check(err error) {
