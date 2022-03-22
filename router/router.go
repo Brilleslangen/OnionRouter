@@ -72,7 +72,7 @@ func connectNode(w http.ResponseWriter, r *http.Request) {
 		err = decoder.Decode(&node)
 		check(err)
 		node.IP = ip
-		fmt.Println("IP: ", node.IP, " Port: ", node.Port, " PublicKey: "+node.PublicKey)
+		fmt.Println("IP:", node.IP, " Port:", node.Port, " PublicKey:"+node.PublicKey)
 
 		// Add to available nodes
 		nodes = append(nodes, node)
@@ -112,8 +112,8 @@ func selectAndPack(url string) (Payload, error) {
 				i--
 				continue
 			}
-			selectedNodes[i] = currentNode
 		}
+		selectedNodes[i] = currentNode
 	}
 
 	// Recursively pack payload
