@@ -1,7 +1,7 @@
 package orstructs
 
 type Payload struct {
-	NextNode []byte
+	NextNode string
 	Payload  []byte
 }
 

@@ -32,7 +32,7 @@ func main() {
 	PORT := os.Args[1]
 
 	// Alert router that this node is active
-	jsonDetails, err := json.Marshal(Node{"TBD", PORT, nodeKey.X.Text(10), nodeKey.Y.Text(10), *new([32]byte)})
+	jsonDetails, err := json.Marshal(Node{IP: "TBD", Port: PORT, PublicKeyX: nodeKey.X.Text(10), PublicKeyY: nodeKey.Y.Text(10), SharedSecret: *new([32]byte)})
 	check(err)
 	request, err := http.NewRequest("POST", "http://127.0.0.1:8080/connect", bytes.NewBuffer(jsonDetails))
 	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
@@ -74,13 +74,13 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 		// Execute request if last node or send to next node
 		var resp *http.Response
-		if string(payload.NextNode) == "" {
+		if payload.NextNode == "" {
 			resp, err = http.Get(string(payload.Payload))
 			check(err)
 		} else {
 			// Create request
 			request, err :=
-				http.NewRequest("POST", "http://"+string(payload.NextNode), bytes.NewBuffer(payload.Payload))
+				http.NewRequest("POST", "http://"+payload.NextNode, bytes.NewBuffer(payload.Payload))
 			check(err)
 			request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 

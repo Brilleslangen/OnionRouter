@@ -123,13 +123,13 @@ func selectAndPack(url string) ([3]Node, Payload, error) {
 	}
 
 	// Recursively pack payload
-	currentPayload := Payload{[]byte(""), []byte(url)}
+	currentPayload := Payload{Payload: []byte(url)}
 	for i := 0; i < 2; i++ {
 		// Convert previous payload to a JSON string and pack into new payload
 		jsonPayload, err := json.Marshal(currentPayload)
 		check(err)
 		encryptedPayload, _ := Encrypt(selectedNodes[i].SharedSecret[:], jsonPayload)
-		currentPayload = Payload{[]byte(selectedNodes[i].Address()), encryptedPayload}
+		currentPayload = Payload{NextNode: selectedNodes[i].Address(), Payload: encryptedPayload}
 	}
 
 	// Pack final payload to be sent from this entity
@@ -137,7 +137,7 @@ func selectAndPack(url string) ([3]Node, Payload, error) {
 	check(err)
 	encryptedPayload, _ := Encrypt(selectedNodes[2].SharedSecret[:], jsonFinal)
 
-	return selectedNodes, Payload{[]byte(selectedNodes[2].Address()), encryptedPayload}, nil
+	return selectedNodes, Payload{NextNode: selectedNodes[2].Address(), Payload: encryptedPayload}, nil
 }
 
 func unpack(respBody io.ReadCloser, selectedNodes [3]Node) io.ReadCloser {
