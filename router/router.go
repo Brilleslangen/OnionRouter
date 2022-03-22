@@ -110,7 +110,7 @@ func connectNode(w http.ResponseWriter, r *http.Request) {
 
 func sendThroughNodes(url string) *http.Response {
 	// Select random nodes and pack payload in encrypted layers
-	payload, err := selectAndPack(url)
+	selectedNodes, payload, err := selectAndPack(url)
 
 	// Create request
 	request, err := http.NewRequest("POST", "http://"+string(payload.NextNode), bytes.NewBuffer(payload.Payload))
@@ -122,15 +122,18 @@ func sendThroughNodes(url string) *http.Response {
 	resp, err := client.Do(request)
 	check(err)
 
+	// Unpack decryption layers and replace response body
+	resp.Body = unpack(resp.Body, selectedNodes)
+
 	return resp
 }
 
-func selectAndPack(url string) (Payload, error) {
+func selectAndPack(url string) ([3]Node, Payload, error) {
 	var selectedNodes [3]Node
 
 	// Ensure there are at least three nodes to traverse
 	if len(nodes) < 3 {
-		return Payload{}, errors.New("there has to be at least three nodes connected")
+		return selectedNodes, Payload{}, errors.New("there has to be at least three nodes connected")
 	}
 
 	// Randomly select three unique nodes
@@ -158,8 +161,9 @@ func selectAndPack(url string) (Payload, error) {
 	// Pack final payload to be sent from this entity
 	jsonFinal, err := json.Marshal(currentPayload)
 	check(err)
+	encryptedPayload, _ := encrypt(selectedNodes[2].SharedSecret[:], jsonFinal)
 
-	return Payload{[]byte(selectedNodes[2].address()), jsonFinal}, nil
+	return selectedNodes, Payload{[]byte(selectedNodes[2].address()), encryptedPayload}, nil
 }
 
 func establishSharedSecret(node Node) [32]byte {
@@ -197,6 +201,21 @@ func decrypt(key []byte, in []byte) ([]byte, error) {
 	text := make([]byte, len(cipherText))
 	cfb.XORKeyStream(text, cipherText)
 	return text, nil
+}
+
+func unpack(respBody io.ReadCloser, selectedNodes [3]Node) io.ReadCloser {
+	for i := 2; i < 0; i-- {
+		// Convert from io.ReadCloser to encrypted bytes
+		encryptedBody, err := io.ReadAll(respBody)
+		check(err)
+
+		// Decrypt bytes
+		decryptedBody, err := decrypt(selectedNodes[i].SharedSecret[:], encryptedBody)
+
+		// Convert decrypted bytes to JSON
+		err = json.Unmarshal(decryptedBody, &respBody)
+	}
+	return respBody
 }
 
 func check(err error) {

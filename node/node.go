@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/ioutil"
 	"log"
 	"math/big"
 	"net/http"
@@ -80,15 +81,15 @@ func main() {
 func handler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		fmt.Println("New POST-request from " + r.RemoteAddr)
-
+		//Decrypt payload
+		body, err := io.ReadAll(r.Body)
+		decryptedBody, _ := decrypt(SharedSecret[:], body)
+		check(err)
 		// Allocate payload struct, then decode and write response body into it.
 		var payload Payload
-		decoder := json.NewDecoder(r.Body)
-		err := decoder.Decode(&payload)
+		err = json.Unmarshal(decryptedBody, &payload)
 		check(err)
 
-		//Decrypt payload
-		payload = decrypt()
 		// Execute request if last node or send to next node
 		var resp *http.Response
 		if payload.NextNode == "" {
@@ -107,8 +108,20 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			check(err)
 		}
 
-		// Forward response from origin-url to client.
-		_, err = io.Copy(w, resp.Body)
+		// Convert response to JSON
+		jsonData, err := json.Marshal(resp.Body)
+		check(err)
+
+		// Encrypt JSON to bytes
+		encryptedResponse, err := encrypt(SharedSecret[:], jsonData)
+		check(err)
+
+		// Convert bytes to io.readCloser, the type of resp.Body
+		encryptedBody := ioutil.NopCloser(bytes.NewReader(encryptedResponse))
+		check(err)
+
+		// Forward response from origin-url to client with encrypted body.
+		_, err = io.Copy(w, encryptedBody)
 		check(err)
 	} else {
 		t, _ := template.ParseFiles("../html/blank.html")
