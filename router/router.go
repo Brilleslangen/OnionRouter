@@ -152,10 +152,9 @@ func selectAndPack(url string) (Payload, error) {
 }
 
 func establishSharedSecret(node Node) [32]byte {
-	generator, _ := ecdsa.GenerateKey(elliptic.P256(), random.Reader)
 	x, _ := new(big.Int).SetString(node.PublicKeyX, 16)
 	y, _ := new(big.Int).SetString(node.PublicKeyY, 16)
-	a, _ := generator.PublicKey.Curve.ScalarMult(x, y, routerKey.D.Bytes())
+	a, _ := routerKey.PublicKey.Curve.ScalarMult(x, y, routerKey.D.Bytes())
 	sharedSecret := sha256.Sum256(a.Bytes())
 
 	return sharedSecret
