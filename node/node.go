@@ -8,17 +8,28 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 )
 
 type Payload struct {
 	NextNode string
-	Payload  string
+	Payload  []byte
+}
+
+type NodeDetails struct {
+	IP        string
+	Port      string
+	PublicKey string
 }
 
 func main() {
-	// Alert OR client that this node i active
-	request, err := http.NewRequest("POST", "http://127.0.0.1:8080/connect", bytes.NewBuffer([]byte("KEY VALUE")))
-	request.Header.Set("Content-Type", "text/plain; charset=UTF-8")
+	PORT := os.Args[1]
+
+	// Alert router that this node is active
+	jsonDetails, err := json.Marshal(NodeDetails{"TBD", PORT, ""})
+	check(err)
+	request, err := http.NewRequest("POST", "http://127.0.0.1:8080/connect", bytes.NewBuffer(jsonDetails))
+	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 
 	client := http.Client{}
 	response, err := client.Do(request)
@@ -30,7 +41,7 @@ func main() {
 
 	// Start listening for requests
 	http.HandleFunc("/", handler)
-	err = http.ListenAndServe(":8081", nil)
+	err = http.ListenAndServe(":"+PORT, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
@@ -46,10 +57,22 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		err := decoder.Decode(&payload)
 		check(err)
 
-		// Get site which is requested
-		resp, err := http.Get(payload.Payload)
-		if err != nil {
-			log.Fatalln(err)
+		// Execute request if last node or send to next node
+		var resp *http.Response
+		if payload.NextNode == "" {
+			resp, err = http.Get(string(payload.Payload))
+			check(err)
+		} else {
+			// Create request
+			request, err :=
+				http.NewRequest("POST", "http://"+payload.NextNode, bytes.NewBuffer(payload.Payload))
+			check(err)
+			request.Header.Set("Content-Type", "application/json; charset=UTF-8")
+
+			// Send request and collect response
+			client := http.Client{}
+			resp, err = client.Do(request)
+			check(err)
 		}
 
 		// Forward response from origin-url to client.
