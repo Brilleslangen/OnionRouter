@@ -16,6 +16,7 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"os"
 	"reflect"
 )
 
@@ -35,8 +36,10 @@ func main() {
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		t, _ := template.ParseFiles("../html/index.html")
-		err := t.Execute(w, nil)
+		wd, _ := os.Getwd()
+		t, err := template.ParseFiles(wd + "/html/index.html")
+		check(err)
+		err = t.Execute(w, nil)
 		check(err)
 	} else {
 		err := r.ParseForm()
@@ -59,6 +62,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 func connectNode(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		routerKey, _ = ecdsa.GenerateKey(elliptic.P256(), random.Reader)
+
 		// Extract IP-address and key
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		var node Node
@@ -128,16 +132,16 @@ func selectAndPack(url string) ([3]Node, Payload, error) {
 		// Convert previous payload to a JSON string and pack into new payload
 		jsonPayload, err := json.Marshal(currentPayload)
 		check(err)
-		encryptedPayload, _ := Encrypt(selectedNodes[i].SharedSecret[:], jsonPayload)
-		currentPayload = Payload{NextNode: selectedNodes[i].Address(), Payload: encryptedPayload}
+		encryptedPayload, _ := Encrypt(selectedNodes[i].SharedSecret[:], string(jsonPayload))
+		currentPayload = Payload{NextNode: selectedNodes[i].Address(), Payload: []byte(encryptedPayload)}
 	}
 
 	// Pack final payload to be sent from this entity
 	jsonFinal, err := json.Marshal(currentPayload)
 	check(err)
-	encryptedPayload, _ := Encrypt(selectedNodes[2].SharedSecret[:], jsonFinal)
+	encryptedPayload, _ := Encrypt(selectedNodes[2].SharedSecret[:], string(jsonFinal))
 
-	return selectedNodes, Payload{NextNode: selectedNodes[2].Address(), Payload: encryptedPayload}, nil
+	return selectedNodes, Payload{NextNode: selectedNodes[2].Address(), Payload: []byte(encryptedPayload)}, nil
 }
 
 func unpack(respBody io.ReadCloser, selectedNodes [3]Node) io.ReadCloser {
@@ -147,10 +151,10 @@ func unpack(respBody io.ReadCloser, selectedNodes [3]Node) io.ReadCloser {
 		check(err)
 
 		// Decrypt bytes
-		decryptedBody, err := Decrypt(selectedNodes[i].SharedSecret[:], encryptedBody)
+		decryptedBody, err := Decrypt(selectedNodes[i].SharedSecret[:], string(encryptedBody))
 
 		// Convert decrypted bytes to JSON
-		err = json.Unmarshal(decryptedBody, &respBody)
+		err = json.Unmarshal([]byte(decryptedBody), &respBody)
 	}
 	return respBody
 }

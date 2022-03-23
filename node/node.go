@@ -63,10 +63,12 @@ func main() {
 func handler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		fmt.Println("New POST-request from " + r.RemoteAddr)
+
 		//Decrypt payload
 		body, err := io.ReadAll(r.Body)
 		decryptedBody, _ := decrypt(SharedSecret[:], body)
 		check(err)
+
 		// Allocate payload struct, then decode and write response body into it.
 		var payload Payload
 		err = json.Unmarshal(decryptedBody, &payload)
@@ -93,6 +95,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		// Convert response to JSON
 		jsonData, err := json.Marshal(resp.Body)
 		check(err)
+		fmt.Println(jsonData)
 
 		// Encrypt JSON to bytes
 		encryptedResponse, err := encrypt(SharedSecret[:], jsonData)
@@ -153,6 +156,6 @@ func decrypt(key []byte, in []byte) ([]byte, error) {
 
 func check(err error) {
 	if err != nil {
-		log.Fatalln(err)
+		panic(err)
 	}
 }
