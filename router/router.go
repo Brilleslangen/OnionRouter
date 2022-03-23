@@ -16,6 +16,7 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"os"
 	"reflect"
 )
 
@@ -35,8 +36,10 @@ func main() {
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		t, _ := template.ParseFiles("../html/index.html")
-		err := t.Execute(w, nil)
+		wd, _ := os.Getwd()
+		t, err := template.ParseFiles(wd + "/html/index.html")
+		check(err)
+		err = t.Execute(w, nil)
 		check(err)
 	} else {
 		err := r.ParseForm()
@@ -59,6 +62,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 func connectNode(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		routerKey, _ = ecdsa.GenerateKey(elliptic.P256(), random.Reader)
+
 		// Extract IP-address and key
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		var node Node

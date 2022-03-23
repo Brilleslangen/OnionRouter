@@ -1,3 +1,4 @@
+// Package ecdh provides Elliptic Curve Diffie Hellman encryption-functionality
 package ecdh
 
 import (
