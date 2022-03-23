@@ -2,110 +2,68 @@
 package ecdh
 
 import (
-	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/base64"
-	"errors"
-	. "github.com/Brilleslangen/OnionRouter/orstructs"
 	"io"
 	"math/big"
-	"strings"
 )
 
-type KeyResponse struct {
-	X string `json:"x"`
-	Y string `json:"y"`
-}
+var curve = elliptic.P256()
 
-func EstablishSharedSecret(node Node, routerKey *ecdsa.PrivateKey) [32]byte {
-	x, _ := new(big.Int).SetString(node.PublicKeyX, 10)
-	y, _ := new(big.Int).SetString(node.PublicKeyY, 10)
-	a, _ := routerKey.PublicKey.Curve.ScalarMult(x, y, routerKey.D.Bytes())
+func ShareSecret(internalKey *ecdsa.PrivateKey, extKeyX big.Int, extKeyY big.Int) []byte {
+	a, _ := curve.ScalarMult(&extKeyX, &extKeyY, internalKey.D.Bytes())
 	sharedSecret := sha256.Sum256(a.Bytes())
-
-	return sharedSecret
+	return sharedSecret[:]
 }
 
-func Encrypt(key []byte, text string) (string, error) {
-	block, err := aes.NewCipher(key)
+func Encrypt(payload []byte, key []byte) ([]byte, error) {
+	// Generate a new AES cipher using our 32 byte long key
+	c, err := aes.NewCipher(key)
 	if err != nil {
-		return "", err
+		return []byte{}, err
 	}
 
-	msg := Pad([]byte(text))
-	ciphertext := make([]byte, aes.BlockSize+len(msg))
-	iv := ciphertext[:aes.BlockSize]
-	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		return "", err
-	}
-
-	cfb := cipher.NewCFBEncrypter(block, iv)
-	cfb.XORKeyStream(ciphertext[aes.BlockSize:], []byte(msg))
-	finalMsg := removeBase64Padding(base64.URLEncoding.EncodeToString(ciphertext))
-	return finalMsg, nil
-}
-
-func Decrypt(key []byte, text string) (string, error) {
-	block, err := aes.NewCipher(key)
+	gcm, err := cipher.NewGCM(c)
 	if err != nil {
-		return "", err
+		return []byte{}, err
 	}
 
-	decodedMsg, err := base64.URLEncoding.DecodeString(addBase64Padding(text))
+	nonce := make([]byte, gcm.NonceSize())
+	_, err = io.ReadFull(rand.Reader, nonce)
 	if err != nil {
-		return "", err
+		return []byte{}, err
 	}
 
-	if (len(decodedMsg) % aes.BlockSize) != 0 {
-		return "", errors.New("blocksize must be multipe of decoded message length")
-	}
+	return gcm.Seal(nonce, nonce, payload, nil), nil
+}
 
-	iv := decodedMsg[:aes.BlockSize]
-	msg := decodedMsg[aes.BlockSize:]
-
-	cfb := cipher.NewCFBDecrypter(block, iv)
-	cfb.XORKeyStream(msg, msg)
-
-	unpadMsg, err := Unpad(msg)
+func Decrypt(encryptedPayload []byte, key []byte) ([]byte, error) {
+	c, err := aes.NewCipher(key)
 	if err != nil {
-		return "", err
+		return []byte{}, err
 	}
 
-	return string(unpadMsg), nil
-}
-
-func addBase64Padding(value string) string {
-	m := len(value) % 4
-	if m != 0 {
-		value += strings.Repeat("=", 4-m)
+	gcm, err := cipher.NewGCM(c)
+	if err != nil {
+		return []byte{}, err
 	}
 
-	return value
-}
-
-func removeBase64Padding(value string) string {
-	return strings.Replace(value, "=", "", -1)
-}
-
-func Pad(src []byte) []byte {
-	padding := aes.BlockSize - len(src)%aes.BlockSize
-	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
-	return append(src, padtext...)
-}
-
-func Unpad(src []byte) ([]byte, error) {
-	length := len(src)
-	unpadding := int(src[length-1])
-
-	if unpadding > length {
-		return nil, errors.New("unpad error. This could happen when incorrect encryption key is used")
+	nonceSize := gcm.NonceSize()
+	if len(encryptedPayload) < nonceSize {
+		return []byte{}, err
 	}
 
-	return src[:(length - unpadding)], nil
+	nonce, encryptedPayload := encryptedPayload[:nonceSize], encryptedPayload[nonceSize:]
+	payload, err := gcm.Open(nil, nonce, encryptedPayload, nil)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return payload, nil
 }
 
 func check(err error) {
