@@ -24,6 +24,7 @@ var nodes []Node
 var routerKey *ecdsa.PrivateKey
 
 func main() {
+	routerKey, _ = ecdsa.GenerateKey(elliptic.P256(), random.Reader)
 
 	// Set handlers
 	http.HandleFunc("/connect", connectNode)
@@ -47,22 +48,17 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 		linkAddress := r.Form["code"][0]
 
-		resp := sendThroughNodes("http://" + linkAddress)
+		respBody := sendThroughNodes("http://" + linkAddress)
+		fmt.Println("respbody1:", respBody)
 
 		// Print to client
-		defer func() {
-			err = resp.Body.Close()
-			check(err)
-		}()
-		_, err = io.Copy(w, resp.Body)
+		_, err = w.Write(respBody)
 		check(err)
 	}
 }
 
 func connectNode(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
-		routerKey, _ = ecdsa.GenerateKey(elliptic.P256(), random.Reader)
-
 		// Extract IP-address and key
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		var node Node
@@ -71,11 +67,12 @@ func connectNode(w http.ResponseWriter, r *http.Request) {
 		check(err)
 		node.IP = ip
 
-		node.SharedSecret = EstablishSharedSecret(node, routerKey)
-		fmt.Printf("\n IP: %x \n Port: %x \n PublicKey: (%x,%x) \n Shared Secret: %x", ip, node.Port, node.PublicKeyX, node.PublicKeyY, node.SharedSecret)
-		x := routerKey.X.Text(10)
-		y := routerKey.Y.Text(10)
-		response := KeyResponse{X: x, Y: y}
+		// Generate shared secret
+		node.SharedSecret = ShareSecret(routerKey, *node.PubX, *node.PubY)
+		fmt.Printf("\n IP: %x \n Port: %x \n Shared Secret: %x", ip, node.Port, node.SharedSecret)
+
+		// Create response with public key coordinates
+		response := KeyResponse{X: routerKey.X, Y: routerKey.Y}
 		jsonDetails, err := json.Marshal(response)
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		_, err = w.Write(jsonDetails)
@@ -86,7 +83,7 @@ func connectNode(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func sendThroughNodes(url string) *http.Response {
+func sendThroughNodes(url string) []byte {
 	// Select random nodes and pack payload in encrypted layers
 	selectedNodes, payload, err := selectAndPack(url)
 
@@ -101,9 +98,9 @@ func sendThroughNodes(url string) *http.Response {
 	check(err)
 
 	// Unpack decryption layers and replace response body
-	resp.Body = unpack(resp.Body, selectedNodes)
+	respBody := unpack(resp.Body, selectedNodes)
 
-	return resp
+	return respBody
 }
 
 func selectAndPack(url string) ([3]Node, Payload, error) {
@@ -132,31 +129,31 @@ func selectAndPack(url string) ([3]Node, Payload, error) {
 		// Convert previous payload to a JSON string and pack into new payload
 		jsonPayload, err := json.Marshal(currentPayload)
 		check(err)
-		encryptedPayload, _ := Encrypt(selectedNodes[i].SharedSecret[:], string(jsonPayload))
-		currentPayload = Payload{NextNode: selectedNodes[i].Address(), Payload: []byte(encryptedPayload)}
+		encryptedPayload, err := Encrypt(jsonPayload, selectedNodes[i].SharedSecret)
+		currentPayload = Payload{NextNode: selectedNodes[i].Address(), Payload: encryptedPayload}
 	}
 
 	// Pack final payload to be sent from this entity
 	jsonFinal, err := json.Marshal(currentPayload)
 	check(err)
-	encryptedPayload, _ := Encrypt(selectedNodes[2].SharedSecret[:], string(jsonFinal))
+	encryptedPayload, err := Encrypt(jsonFinal, selectedNodes[2].SharedSecret)
 
-	return selectedNodes, Payload{NextNode: selectedNodes[2].Address(), Payload: []byte(encryptedPayload)}, nil
+	return selectedNodes, Payload{NextNode: selectedNodes[2].Address(), Payload: encryptedPayload}, nil
 }
 
-func unpack(respBody io.ReadCloser, selectedNodes [3]Node) io.ReadCloser {
-	for i := 2; i < 0; i-- {
-		// Convert from io.ReadCloser to encrypted bytes
-		encryptedBody, err := io.ReadAll(respBody)
-		check(err)
+func unpack(respBody io.ReadCloser, selectedNodes [3]Node) []byte {
+	body, err := io.ReadAll(respBody)
+
+	for i := 2; i >= 0; i-- {
+		fmt.Println("i:", i)
 
 		// Decrypt bytes
-		decryptedBody, err := Decrypt(selectedNodes[i].SharedSecret[:], string(encryptedBody))
-
-		// Convert decrypted bytes to JSON
-		err = json.Unmarshal([]byte(decryptedBody), &respBody)
+		body, err = Decrypt(body, selectedNodes[i].SharedSecret)
+		check(err)
+		fmt.Println("Unpacked: ", string(body), "\n")
 	}
-	return respBody
+
+	return body
 }
 
 func check(err error) {
