@@ -57,6 +57,7 @@ func Decrypt(encryptedPayload []byte, key []byte) ([]byte, error) {
 		return []byte{}, err
 	}
 
+	// Trim front and end by Nonce
 	nonce, encryptedPayload := encryptedPayload[:nonceSize], encryptedPayload[nonceSize:]
 	payload, err := gcm.Open(nil, nonce, encryptedPayload, nil)
 	if err != nil {
@@ -64,10 +65,4 @@ func Decrypt(encryptedPayload []byte, key []byte) ([]byte, error) {
 	}
 
 	return payload, nil
-}
-
-func check(err error) {
-	if err != nil {
-		panic(err)
-	}
 }
