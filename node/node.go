@@ -18,17 +18,27 @@ import (
 
 var nodeKey *ecdsa.PrivateKey
 var SharedSecret []byte
+var PORT string
+var RouterIP = "172.18.0.1" // If run in dockered container
 
 func main() {
+	if len(os.Args) < 2 {
+		fmt.Println("You have to assign a port for the node listen on. \n " +
+			"You can do this by adding port number as the first command line argument.")
+	}
+	// If Router IP is specified
+	if len(os.Args) > 2 {
+		RouterIP = os.Args[2]
+	}
 
 	// Initialize keypair in the node
 	nodeKey, _ = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	PORT := os.Args[1]
+	PORT = os.Args[1]
 
 	// Alert router that this node is active
 	jsonDetails, err := json.Marshal(Node{IP: "TBD", Port: PORT, PubX: nodeKey.X, PubY: nodeKey.Y, SharedSecret: []byte{}})
 	check(err)
-	request, err := http.NewRequest("POST", "http://172.18.0.1:8080/connect", bytes.NewBuffer(jsonDetails))
+	request, err := http.NewRequest("POST", "http://"+RouterIP+":8080/connect", bytes.NewBuffer(jsonDetails))
 	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	client := http.Client{}
 	response, err := client.Do(request)
@@ -45,8 +55,8 @@ func main() {
 
 	if response.Status == "200 OK" {
 		fmt.Println("Connected to router")
-		fmt.Println("Available on port:", PORT)
-		fmt.Printf("Shared Secret Symmetric Key: %x", SharedSecret)
+		fmt.Println(" Available on port:", PORT)
+		fmt.Printf(" Shared Secret Symmetric Key: %x\n", SharedSecret)
 	} else {
 		fmt.Println("Status OK not received. \nStatus code received:", response.Status)
 	}

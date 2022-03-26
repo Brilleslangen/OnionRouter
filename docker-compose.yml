@@ -7,32 +7,50 @@ services:
     ports:
       - 8080:8080
   node-1:
+    image: or-node
     build:
       dockerfile: node/Dockerfile
       context: ./
-      args:
-        - PORT=8081
     ports:
       - 8081:8081
+    entrypoint:
+      - "./node"
+      - "8081"
     depends_on:
       - router
   node-2:
-    build:
-      dockerfile: node/Dockerfile
-      context: ./
-      args:
-        PORT: 8082
+    image: or-node
     ports:
       - 8082:8082
+    entrypoint:
+      - "./node"
+      - "8082"
     depends_on:
-      - router
+      - node-1
   node-3:
-    build:
-      dockerfile: node/Dockerfile
-      context: ./
-      args:
-        PORT: 8083
+    image: or-node
     ports:
       - 8083:8083
+    entrypoint:
+      - "./node"
+      - "8083"
     depends_on:
-      - router
+      - node-1
+  node-4:
+    image: or-node
+    ports:
+      - 8084:8084
+    entrypoint:
+      - "./node"
+      - "8084"
+    depends_on:
+      - node-1
+  node-5:
+    image: or-node
+    ports:
+      - 8085:8085
+    entrypoint:
+      - "./node"
+      - "8085"
+    depends_on:
+      - node-1
