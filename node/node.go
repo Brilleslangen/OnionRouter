@@ -45,7 +45,8 @@ func main() {
 
 	if response.Status == "200 OK" {
 		fmt.Println("Connected to router")
-		fmt.Println("Shared Secret Symmetric Key:", SharedSecret)
+		fmt.Println("Available on port:", PORT)
+		fmt.Printf("Shared Secret Symmetric Key: %x", SharedSecret)
 	} else {
 		fmt.Println("Status OK not received. \nStatus code received:", response.Status)
 	}
@@ -73,7 +74,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		var payload Payload
 		err = json.Unmarshal(decryptedBody, &payload)
 		check(err)
-		
+
 		// Execute request if last node or send to next node
 		var resp *http.Response
 		if payload.NextNode == "" {

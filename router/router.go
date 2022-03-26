@@ -69,7 +69,8 @@ func connectNode(w http.ResponseWriter, r *http.Request) {
 
 		// Generate shared secret
 		node.SharedSecret = ShareSecret(routerKey, *node.PubX, *node.PubY)
-		fmt.Printf("\n IP: %x \n Port: %x \n Shared Secret: %x", ip, node.Port, node.SharedSecret)
+		fmt.Println("\nA new node has connected:")
+		fmt.Printf(" IP: %s \n Port: %s \n Shared Secret Symmetric Key: %x\n", ip, node.Port, node.SharedSecret)
 
 		// Create response with public key coordinates
 		response := KeyResponse{X: routerKey.X, Y: routerKey.Y}
