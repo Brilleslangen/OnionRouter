@@ -1,0 +1,29 @@
+name: Docker Image CD
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Docker log in
+      env: 
+        DOCKER_USER: ${{secrets.DOCKER_USERNAME}}
+        DOCKER_PASSWORD: ${{secrets.DOCKER_ACCESS_TOKEN}}
+      run: docker login -u DOCKER_USER -p DOCKER_PASSWORD
+      
+    - name: Build Router
+      run: docker build -t router:0.1 -f router/Dockerfile .
+    - name: Publish Router to Docker Hub
+      run: docker push ${{secrets.DOCKER_USERNAME}}/onion-router:router:0.1
+    - name: Build Node
+      run: docker build -t node:0.1 -f node/Dockerfile .
+    - name: Push Router image to Docker Hub
+      run: docker push ${{secrets.DOCKER_USERNAME}}/onion-router:node:0.1
+    
