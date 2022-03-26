@@ -36,6 +36,7 @@ func main() {
 	}
 }
 
+// handler handles requests to the "/" endpoint.
 func handler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		wd, _ := os.Getwd()
@@ -57,6 +58,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// connectNode connects a node making a request to the "/connect" endpoint.
 func connectNode(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		// Extract IP-address and key
@@ -84,6 +86,7 @@ func connectNode(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// sendThroughNodes makes an HTTP-request to the desired URL.
 func sendThroughNodes(url string) []byte {
 	// Select random nodes and pack payload in encrypted layers
 	selectedNodes, payload, err := selectAndPack(url)
