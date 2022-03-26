@@ -52,6 +52,8 @@ func main() {
 
 	// Start listening for requests
 	http.HandleFunc("/", handler)
+
+	// http.ListenAndServe assigns a new thread to each connection
 	err = http.ListenAndServe(":"+PORT, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
@@ -71,9 +73,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		var payload Payload
 		err = json.Unmarshal(decryptedBody, &payload)
 		check(err)
-		fmt.Println("NEXT NODE: ", payload.NextNode)
-		fmt.Println("PAYLOAD: ", string(payload.Payload))
-
+		
 		// Execute request if last node or send to next node
 		var resp *http.Response
 		if payload.NextNode == "" {
