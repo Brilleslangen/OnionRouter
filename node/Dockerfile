@@ -1,7 +1,6 @@
 FROM golang:1.17-alpine
 ENV GO111MODULE=on
-ARG PORT
-ENV PORT=${PORT}
+ENV PORT ""
 
 WORKDIR /nodeapp
 COPY ./html/* ./html/
