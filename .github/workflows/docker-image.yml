@@ -21,9 +21,9 @@ jobs:
     - name: Build Router
       run: docker build -t router:0.1 -f router/Dockerfile .
     - name: Publish Router to Docker Hub
-      run: docker push ${{secrets.DOCKER_USERNAME}}/onion-router:router:0.1
+      run: docker push ${{secrets.DOCKER_USERNAME}}/onion-router:router
     - name: Build Node
       run: docker build -t node:0.1 -f node/Dockerfile .
     - name: Push Router image to Docker Hub
-      run: docker push ${{secrets.DOCKER_USERNAME}}/onion-router:node:0.1
+      run: docker push ${{secrets.DOCKER_USERNAME}}/onion-router:node
     
