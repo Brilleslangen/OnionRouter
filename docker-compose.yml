@@ -15,6 +15,7 @@ services:
       - 8081:8081
     environment:
       - PORT=8081
+      - ROUTER_IP=172.18.0.1
     depends_on:
       - router
   node-2:
@@ -23,6 +24,7 @@ services:
       - 8082:8082
     environment:
       - PORT=8082
+      - ROUTER_IP=172.18.0.1
     depends_on:
       - node-1
   node-3:
@@ -31,6 +33,7 @@ services:
       - 8083:8083
     environment:
       - PORT=8083
+      - ROUTER_IP=172.18.0.1
     depends_on:
       - node-1
   node-4:
@@ -39,6 +42,7 @@ services:
       - 8084:8084
     environment:
       - PORT=8084
+      - ROUTER_IP=172.18.0.1
     depends_on:
       - node-1
   node-5:
@@ -47,5 +51,6 @@ services:
       - 8085:8085
     environment:
       - PORT=8085
+      - ROUTER_IP=172.18.0.1
     depends_on:
       - node-1

@@ -24,9 +24,10 @@ Løsningen er laget utelukkende i native-biblioteket til Go.
 
 ### Installasjonsinstrukser
 
-Kun Go kreves for å kjøre løsningen. https://go.dev/doc/install
+Kun Docker kreves for å kjøre løsningen. https://go.dev/doc/install
 
 ### Instruksjoner for å bruke løsningen
+1.
 
 ### Kjøring av tester
 

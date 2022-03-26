@@ -21,7 +21,7 @@ var SharedSecret []byte
 
 func main() {
 	var PORT string
-	var RouterIP = "172.18.0.1" // If run in dockered container
+	var RouterIP = "127.0.0.1" // If run in dockered container
 
 	if len(os.Args) < 2 {
 		fmt.Println("You have to assign a port for the node listen on. \n" +
