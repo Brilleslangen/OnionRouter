@@ -103,6 +103,7 @@ func sendThroughNodes(url string) []byte {
 	return respBody
 }
 
+// selectAndPack randomly selects three nodes and recursively packs the payload and address of the next node
 func selectAndPack(url string) ([3]Node, Payload, error) {
 	var selectedNodes [3]Node
 
@@ -141,6 +142,7 @@ func selectAndPack(url string) ([3]Node, Payload, error) {
 	return selectedNodes, Payload{NextNode: selectedNodes[2].Address(), Payload: encryptedPayload}, nil
 }
 
+// unpack decrypts three layers of encryption on a response body
 func unpack(respBody io.ReadCloser, selectedNodes [3]Node) []byte {
 	body, err := io.ReadAll(respBody)
 
@@ -150,7 +152,6 @@ func unpack(respBody io.ReadCloser, selectedNodes [3]Node) []byte {
 		// Decrypt bytes
 		body, err = Decrypt(body, selectedNodes[i].SharedSecret)
 		check(err)
-		fmt.Println("Unpacked: ", string(body), "\n")
 	}
 
 	return body

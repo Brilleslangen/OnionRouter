@@ -41,7 +41,6 @@ func main() {
 	check(err)
 
 	SharedSecret = ShareSecret(nodeKey, *routerKey.X, *routerKey.Y)
-	fmt.Println(SharedSecret)
 	check(err)
 
 	if response.Status == "200 OK" {
@@ -50,6 +49,8 @@ func main() {
 
 	// Start listening for requests
 	http.HandleFunc("/", handler)
+
+	// http.ListenAndServe assigns a new thread to each connection
 	err = http.ListenAndServe(":"+PORT, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
@@ -62,7 +63,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 		//Decrypt payload
 		body, err := io.ReadAll(r.Body)
-		fmt.Println(len(SharedSecret), ":", len(body))
 		decryptedBody, err := Decrypt(body, SharedSecret)
 		check(err)
 
@@ -70,8 +70,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		var payload Payload
 		err = json.Unmarshal(decryptedBody, &payload)
 		check(err)
-		fmt.Println("NEXT NODE: ", payload.NextNode)
-		fmt.Println("PAYLOAD: ", string(payload.Payload))
 		// Execute request if last node or send to next node
 		var resp *http.Response
 		if payload.NextNode == "" {
