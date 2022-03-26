@@ -28,7 +28,7 @@ func main() {
 	// Alert router that this node is active
 	jsonDetails, err := json.Marshal(Node{IP: "TBD", Port: PORT, PubX: nodeKey.X, PubY: nodeKey.Y, SharedSecret: []byte{}})
 	check(err)
-	request, err := http.NewRequest("POST", "http://127.0.0.1:8080/connect", bytes.NewBuffer(jsonDetails))
+	request, err := http.NewRequest("POST", "http://172.18.0.1:8080/connect", bytes.NewBuffer(jsonDetails))
 	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	client := http.Client{}
 	response, err := client.Do(request)
@@ -41,11 +41,13 @@ func main() {
 	check(err)
 
 	SharedSecret = ShareSecret(nodeKey, *routerKey.X, *routerKey.Y)
-	fmt.Println(SharedSecret)
 	check(err)
 
 	if response.Status == "200 OK" {
 		fmt.Println("Connected to router")
+		fmt.Println("Shared Secret Symmetric Key:", SharedSecret)
+	} else {
+		fmt.Println("Status OK not received. \nStatus code received:", response.Status)
 	}
 
 	// Start listening for requests
@@ -62,7 +64,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 		//Decrypt payload
 		body, err := io.ReadAll(r.Body)
-		fmt.Println(len(SharedSecret), ":", len(body))
 		decryptedBody, err := Decrypt(body, SharedSecret)
 		check(err)
 
@@ -72,6 +73,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		check(err)
 		fmt.Println("NEXT NODE: ", payload.NextNode)
 		fmt.Println("PAYLOAD: ", string(payload.Payload))
+
 		// Execute request if last node or send to next node
 		var resp *http.Response
 		if payload.NextNode == "" {

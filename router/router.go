@@ -29,6 +29,7 @@ func main() {
 	// Set handlers
 	http.HandleFunc("/connect", connectNode)
 	http.HandleFunc("/", handler)
+	fmt.Println("Router initiated")
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
@@ -49,7 +50,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		linkAddress := r.Form["code"][0]
 
 		respBody := sendThroughNodes("http://" + linkAddress)
-		fmt.Println("respbody1:", respBody)
 
 		// Print to client
 		_, err = w.Write(respBody)
@@ -145,12 +145,9 @@ func unpack(respBody io.ReadCloser, selectedNodes [3]Node) []byte {
 	body, err := io.ReadAll(respBody)
 
 	for i := 2; i >= 0; i-- {
-		fmt.Println("i:", i)
-
 		// Decrypt bytes
 		body, err = Decrypt(body, selectedNodes[i].SharedSecret)
 		check(err)
-		fmt.Println("Unpacked: ", string(body), "\n")
 	}
 
 	return body

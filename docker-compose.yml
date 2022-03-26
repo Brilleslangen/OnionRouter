@@ -1,0 +1,38 @@
+
+services:
+  router:
+    build:
+      dockerfile: router/Dockerfile
+      context: ./
+    ports:
+      - 8080:8080
+  node-1:
+    build:
+      dockerfile: node/Dockerfile
+      context: ./
+      args:
+        - PORT=8081
+    ports:
+      - 8081:8081
+    depends_on:
+      - router
+  node-2:
+    build:
+      dockerfile: node/Dockerfile
+      context: ./
+      args:
+        PORT: 8082
+    ports:
+      - 8082:8082
+    depends_on:
+      - router
+  node-3:
+    build:
+      dockerfile: node/Dockerfile
+      context: ./
+      args:
+        PORT: 8083
+    ports:
+      - 8083:8083
+    depends_on:
+      - router
