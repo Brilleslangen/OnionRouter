@@ -30,6 +30,8 @@ func main() {
 	http.HandleFunc("/connect", connectNode)
 	http.HandleFunc("/", handler)
 	fmt.Println("Router initiated")
+
+	// http.ListenAndServe assigns a new thread to each connection
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
@@ -50,7 +52,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 		linkAddress := r.Form["code"][0]
 
-		respBody := sendThroughNodes("http://" + linkAddress)
+		var respBody []byte
+		if linkAddress[0:7] == "http://" {
+			respBody = sendThroughNodes(linkAddress)
+		} else {
+			respBody = sendThroughNodes("http://" + linkAddress)
+		}
 
 		// Print to client
 		_, err = w.Write(respBody)
@@ -161,6 +168,6 @@ func unpack(respBody io.ReadCloser, selectedNodes [3]Node) []byte {
 
 func check(err error) {
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
 }
