@@ -37,7 +37,10 @@ Når vi hadde fått til en løsning vi var fornøyde med, begynte vi å jobbe me
 ## Vår løsning
 ### Frontend funksjonalitet
 Vi har laget en web-tjener som lar brukeren hente inn en vilkårlig nettside via HTTP.<br><br>
-<img src=".md-images/solution-demo.gif" alt=".md-images/solution-demo.gif" width="100%"/><br><br>
+
+https://user-images.githubusercontent.com/70381155/160305483-3e482b8b-9567-426c-bc97-8e63ddda47b6.mov
+
+<br><br>
 Den gjør kun en enkelt GET-forespørsel til linken som blir gitt i tekstboksen. Løsningen vil så vise en kopi av
 responsen den fikk fra GET-forespørselen.
 
@@ -147,7 +150,8 @@ I terminalen vil du få alle outputene fra de ulike tjenerne slik at du kan se h
 sender spørringen fra localhost. MERK: Her kjøres både serveren og nodene på samme maskin. Dette gjør det vanskelig å få
 sjekket ut hva som faktisk skjer i wireshark.
 Slik skal det se ut (Mac-terminal):<br>
-<img src=".md-images/docker-compose.gif" alt=".md-images/docker-compose.gif" width="100%"/>
+
+https://user-images.githubusercontent.com/70381155/160305552-dcc8906c-4194-446e-8f0f-c5b7a50be6df.mov
 
 ### Docker - Kjør tilpassede instanser
 *Avhengighet: Docker*<br>
@@ -174,7 +178,8 @@ variabelen "ROUTER_IP" dersom noden kjører på samme maskin som routeren: ROUTE
 Hvis noden kjøres på en annen maskin må IP-adressen til maskinen routeren kjøres på legges inn som ROUTER_IP.
 
 Slik skal initialisering og korrekt oppkobling se ut:<br>
-![init-r-and-n.png](.md-images/init-r-and-n.png) <br>
+![init-r-and-n](https://user-images.githubusercontent.com/70381155/160305566-d71b3700-756f-48a0-aa62-c295c9b6692a.png)
+<br>
 Merk at router må initialiseres før noder kan koble til.
 
 **Kjøre en fungerende tjener med Docker**
