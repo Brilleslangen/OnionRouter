@@ -17,7 +17,7 @@ func TestRouter(t *testing.T) {
 
 	// Wait for router and nodes to start
 	// Increase this if the test fails
-	time.Sleep(30 * time.Second)
+	time.Sleep(60 * time.Second)
 
 	// Build test request
 	testUrl := "http://127.0.0.1:8080/"
