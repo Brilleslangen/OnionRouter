@@ -99,7 +99,7 @@ func sendThroughNodes(url string) []byte {
 	selectedNodes, payload, err := selectAndPack(url)
 
 	// Create request
-	request, err := http.NewRequest("POST", "http://"+string(payload.NextNode), bytes.NewBuffer(payload.Payload))
+	request, err := http.NewRequest("POST", "http://"+string(payload.NextNode), bytes.NewBuffer(payload.Content))
 	check(err)
 	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 
@@ -136,13 +136,13 @@ func selectAndPack(url string) ([3]Node, Payload, error) {
 	}
 
 	// Recursively pack payload
-	currentPayload := Payload{Payload: []byte(url)}
+	currentPayload := Payload{Content: []byte(url)}
 	for i := 0; i < 2; i++ {
 		// Convert previous payload to a JSON string and pack into new payload
 		jsonPayload, err := json.Marshal(currentPayload)
 		check(err)
 		encryptedPayload, err := Encrypt(jsonPayload, selectedNodes[i].SharedSecret)
-		currentPayload = Payload{NextNode: selectedNodes[i].Address(), Payload: encryptedPayload}
+		currentPayload = Payload{NextNode: selectedNodes[i].Address(), Content: encryptedPayload}
 	}
 
 	// Pack final payload to be sent from this entity
@@ -150,7 +150,7 @@ func selectAndPack(url string) ([3]Node, Payload, error) {
 	check(err)
 	encryptedPayload, err := Encrypt(jsonFinal, selectedNodes[2].SharedSecret)
 
-	return selectedNodes, Payload{NextNode: selectedNodes[2].Address(), Payload: encryptedPayload}, nil
+	return selectedNodes, Payload{NextNode: selectedNodes[2].Address(), Content: encryptedPayload}, nil
 }
 
 // unpack decrypts three layers of encryption on a response body
