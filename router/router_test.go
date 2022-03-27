@@ -13,11 +13,11 @@ import (
 )
 
 func TestRouter(t *testing.T) {
-	initRouter()
+	initRouter(6)
 
 	// Wait for router and nodes to start
 	// Increase this if the test fails
-	time.Sleep(120 * time.Second)
+	time.Sleep(30 * time.Second)
 
 	// Build test request
 	testUrl := "http://127.0.0.1:8080/"
@@ -54,7 +54,7 @@ func TestRouter(t *testing.T) {
 }
 
 // initRouter spins up a router with num nodes to choose from
-func initRouter() {
+func initRouter(num int) {
 	// Initiate router
 	cmd := exec.Command("go", "run", "router/router.go")
 	cmd.Dir = "../"
@@ -64,13 +64,11 @@ func initRouter() {
 	fmt.Println("Router initiated")
 
 	// Initiate num nodes, so the router can choose a random relay-pattern
-	for i := 1; i <= 3; i++ {
-		go func() {
-			cmd := exec.Command("go", "run", "node/node.go", "808"+strconv.Itoa(i))
-			cmd.Dir = "../"
-			err := cmd.Start()
-			check(err)
-		}()
+	for i := 1; i <= num; i++ {
+		cmd := exec.Command("go", "run", "node/node.go", "808"+strconv.Itoa(i))
+		cmd.Dir = "../"
+		err := cmd.Start()
+		check(err)
 	}
 	fmt.Println("All instances are running")
 }
