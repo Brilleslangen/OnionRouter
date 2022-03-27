@@ -14,7 +14,7 @@ import (
 
 func TestEncryptionAndDecryption(t *testing.T) {
 	// Create arbitrary test instance
-	testInstance := orstructs.Payload{Payload: []byte("vg.no"), NextNode: "123.123:123123"}
+	testInstance := orstructs.Payload{Content: []byte("vg.no"), NextNode: "123.123:123123"}
 	fmt.Println("INSTANCE PASSED IN: ", testInstance)
 
 	// Marshal it into a JSON

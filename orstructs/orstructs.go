@@ -8,7 +8,7 @@ import (
 // The Payload struct is used to recursively pack and encrypt a request and response
 type Payload struct {
 	NextNode string
-	Payload  []byte
+	Content  []byte
 }
 
 // The Node struct represents a node in the router

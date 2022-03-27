@@ -89,12 +89,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		// Execute request if last node or send to next node
 		var resp *http.Response
 		if payload.NextNode == "" {
-			resp, err = http.Get(string(payload.Payload))
+			resp, err = http.Get(string(payload.Content))
 			check(err)
 		} else {
 			// Create request
 			request, err :=
-				http.NewRequest("POST", "http://"+payload.NextNode, bytes.NewBuffer(payload.Payload))
+				http.NewRequest("POST", "http://"+payload.NextNode, bytes.NewBuffer(payload.Content))
 			check(err)
 			request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 
