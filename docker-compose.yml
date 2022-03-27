@@ -7,7 +7,7 @@ services:
     ports:
       - 8080:8080
   node-1:
-    image: or-node
+    &node-1
     build:
       dockerfile: node/Dockerfile
       context: ./
@@ -19,7 +19,7 @@ services:
     depends_on:
       - router
   node-2:
-    image: or-node
+    <<: *node-1
     ports:
       - 8082:8082
     environment:
@@ -28,7 +28,7 @@ services:
     depends_on:
       - node-1
   node-3:
-    image: or-node
+    <<: *node-1
     ports:
       - 8083:8083
     environment:
@@ -37,7 +37,7 @@ services:
     depends_on:
       - node-1
   node-4:
-    image: or-node
+    <<: *node-1
     ports:
       - 8084:8084
     environment:
@@ -46,7 +46,7 @@ services:
     depends_on:
       - node-1
   node-5:
-    image: or-node
+    <<: *node-1
     ports:
       - 8085:8085
     environment:
