@@ -65,10 +65,12 @@ func initRouter() {
 
 	// Initiate num nodes, so the router can choose a random relay-pattern
 	for i := 1; i <= 3; i++ {
-		cmd := exec.Command("go", "run", "node/node.go", "808"+strconv.Itoa(i))
-		cmd.Dir = "../"
-		err := cmd.Start()
-		check(err)
+		go func() {
+			cmd := exec.Command("go", "run", "node/node.go", "808"+strconv.Itoa(i))
+			cmd.Dir = "../"
+			err := cmd.Start()
+			check(err)
+		}()
 	}
 	fmt.Println("All instances are running")
 }
