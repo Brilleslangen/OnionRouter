@@ -24,6 +24,8 @@ jobs:
       run: docker push ${{secrets.DOCKER_USERNAME}}/onion-router:router
     - name: Build Node
       run: docker build -t ${{secrets.DOCKER_USERNAME}}/onion-router:node -f node/Dockerfile .
+    - name: Test router
+      run: go test ./router
     - name: Push Router image to Docker Hub
       run: docker push ${{secrets.DOCKER_USERNAME}}/onion-router:node
     
