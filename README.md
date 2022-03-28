@@ -103,6 +103,25 @@ Her forklarer vi hva som skjer når en bruker sender inn en lenke den ønsker å
 
 ### Krypteringsløsning
 
+**Nøkkelutveksling**
+
+Nøkkelutvekslingen i denne løsningen er implementert ved hjelp av Elliptic Curve Diffie-Hellman (ECDH). Dette er en protokoll som lar to parter etablere en "shared secret" over en
+usikret kanal. Protokollen baserer seg på vanskelighetsgraden av å løse regnestykker som involverer elliptiske kurver. Kurven er gitt ved y2 osv. Vi kan legge et punkt til seg selv
+ved å regene ut krysningspunktet mellom tangenten og funksjonen, og deretter endre fortegnet på y-verdien til resultatet. Deretter vil det nye og det gamle punktet kunne danne en ny
+lineær funksjon, og denne funksjonens krysningspunkt med den opprinnelige kurven vil, dersom vi endrer fortegnet på y-verdien, være det tredje multiplum av punktet. Det viser seg at
+gitt to punkter A og B på en elliptisk kurve, kan det ta enorm beregningskraft å regne ut A = nB, dersom det går. Dermed kan A og B være den offentlige nøkkelen, og n være den private nøkkelen.
+Kurven har også offentlige parametere.
+
+Krypteringsstandard
+Vi har brukt Advanced Encryption Standard (AES), som er en variant av Rijndael block cipher algoritmen. Algoritmen utvider krypteringsnøkkelen og bryter krypteringen opp i flere runder.
+Hver runde består av stegene SubBytes, ShiftRows, MixColumns og AddRoundKey. Under krypteringen blir klarteksten delt opp i todimensjonale lister som inneholder 16 bytes hver. I SubBytes-steget
+byttes hver byte ut med annen i henhold til et "lookup table". Under ShiftRows-steget flyttes de tre siste radene i hver todimensjonale liste et visst antall plasser. Videre blandes kolonnene
+i MixColumns-steget. Til slutt legges rundenøkkelen til i listen.
+
+Operasjonsmodus
+Vi har brukt Galios/Counter Mode (GCM) som operasjonsmodus for krypteringen. GCM er definert for block chiphers med 128 bits, som er det implementasjonen vår bruker. Dette vil si at meldinger brytes
+opp og sendes som 128 bits om gangen, og operasjonsmodusen beskriver hvordan dette gjøres.
+
 ## Fremtidig arbeid
 * **Implementere interaktivitet** <br>
   Siden vi kun viser fram en kopi av responsen, så er ikke nettsiden noe mer interaktiv enn det som følger med i reposnen
