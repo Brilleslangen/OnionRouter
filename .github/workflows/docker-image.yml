@@ -16,8 +16,6 @@ jobs:
       with:
         go-version: '^1.13.1'
     - name: Run router test
-      run: go test ./router
-    - name: Run router test
       run: go test ./ecdh
       
 
