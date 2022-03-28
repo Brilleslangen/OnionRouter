@@ -1,4 +1,5 @@
 # IDATT2104 Onion Router
+*For å kunne se videoer, les denne filen fra GitHub-repositoryet vårt.*
 ## Om prosjektet
 Dette er et prosjekt i emnet "IDATT2104 - Nettverksprogrammering" ved NTNU, vår 2022. Vi fikk i oppgave å lage vår egen
 implementasjon av konseptet *Onion Routing*. Vi kan selv velge hva slags funksjonalitet løsningen vår skal ha, gitt at
@@ -245,5 +246,18 @@ spesifikk IP kan det settes inn her.
 4. Gå til ```http://<router-ip>:8080``` og legg inn en URL du ønsker å få vist frem anonymt.
 
 ### Kjøring av tester
+Vi har lagd noen få tester: 
+* Testing av kryptering og dekryptering <br>
+Du kan teste ut denne ved å navigere til folderet ```ecdh``` og kjøre: <br>
+```console
+$ go test
+```
+* Å starte opp en router og et antall noder og sende en request.
+Du kan teste ut denne ved å navigere til folderet ```router``` og kjøre: <br>
+```console
+$ go test
+```
 
-Kjøring av tester kan gjøres ved å navigere til prosjektet og kjøre kommandoen "go test".
+*Vi fikk kun implementert testen av krypteringen i CI-løsningen vår. Dette er ettersom at 
+GitHub Actions takler kjøring av flere tråder samtidig inkonsekvent. Av og til funka det, men som regel ikke.
+Vi valgte derfor å fjerne denne testen fra CI. Den fungerer når den kjøres lokalt*

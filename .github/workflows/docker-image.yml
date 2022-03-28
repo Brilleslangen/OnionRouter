@@ -17,8 +17,6 @@ jobs:
         go-version: '^1.13.1'
     - name: Run encryption tests
       run: go test ./ecdh/
-    - name: Run OnionRouter test
-      run: go test ./router/
       
 
   build-and-deploy:
