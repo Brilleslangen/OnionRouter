@@ -103,8 +103,7 @@ Her forklarer vi hva som skjer når en bruker sender inn en lenke den ønsker å
 
 ### Krypteringsløsning
 
-**Nøkkelutveksling**
-
+**Nøkkelutveksling** <br>
 Nøkkelutvekslingen i denne løsningen er implementert ved hjelp av Elliptic Curve Diffie-Hellman (ECDH). Dette er en protokoll som lar to parter etablere en "shared secret" over en
 usikret kanal. Protokollen baserer seg på vanskelighetsgraden av å løse regnestykker som involverer elliptiske kurver. Kurven er gitt ved y2 osv. Vi kan legge et punkt til seg selv
 ved å regene ut krysningspunktet mellom tangenten og funksjonen, og deretter endre fortegnet på y-verdien til resultatet. Deretter vil det nye og det gamle punktet kunne danne en ny
@@ -112,15 +111,19 @@ lineær funksjon, og denne funksjonens krysningspunkt med den opprinnelige kurve
 gitt to punkter A og B på en elliptisk kurve, kan det ta enorm beregningskraft å regne ut A = nB, dersom det går. Dermed kan A og B være den offentlige nøkkelen, og n være den private nøkkelen.
 Kurven har også offentlige parametere.
 
-Krypteringsstandard
+**Krypteringsstandard** <br>
 Vi har brukt Advanced Encryption Standard (AES), som er en variant av Rijndael block cipher algoritmen. Algoritmen utvider krypteringsnøkkelen og bryter krypteringen opp i flere runder.
 Hver runde består av stegene SubBytes, ShiftRows, MixColumns og AddRoundKey. Under krypteringen blir klarteksten delt opp i todimensjonale lister som inneholder 16 bytes hver. I SubBytes-steget
 byttes hver byte ut med annen i henhold til et "lookup table". Under ShiftRows-steget flyttes de tre siste radene i hver todimensjonale liste et visst antall plasser. Videre blandes kolonnene
-i MixColumns-steget. Til slutt legges rundenøkkelen til i listen.
+i MixColumns-steget. Hver runde har sin egen nøkkel, og denne rundenøkkelen legges til slutt ved i listen.
 
-Operasjonsmodus
+**Operasjonsmodus** <br>
 Vi har brukt Galios/Counter Mode (GCM) som operasjonsmodus for krypteringen. GCM er definert for block chiphers med 128 bits, som er det implementasjonen vår bruker. Dette vil si at meldinger brytes
-opp og sendes som 128 bits om gangen, og operasjonsmodusen beskriver hvordan dette gjøres.
+opp og sendes som 128 bits om gangen, og operasjonsmodusen beskriver hvordan dette gjøres. GCM kombinerer "counter mode" fra kryptografien, og "Galios mode" for autentisering.
+Counter mode gjør om en block chiper til en stream cipher. Neste "keystream" genereres ved å kryptere verdiene til en counter, en funksjon som lager en sekvens 
+av tall som ikke vil gjenta seg på svært lang tid. Om en counter skulle startet på 1, ville ikke tilfeldigheten vært tilstrekkelig. Derfor sammenkobles en tallverdi med en initialiseringsvektor (IV), også kalt "nonce".
+En block av klartekst krypteres av at en XOR-algoritme,
+eksklusiv disjunkjson, brukes på blocken og keystreamen. Deretter øker counteren og prosessen gjentas på neste block med klartekst.
 
 ## Fremtidig arbeid
 * **Implementere interaktivitet** <br>
@@ -147,6 +150,7 @@ opp og sendes som 128 bits om gangen, og operasjonsmodusen beskriver hvordan det
 Løsningen er laget utelukkende i native-biblioteket til Go.
 Du kan finne nativ-bibliotekene vi har brukt under "Import" i go filene.
 Ingen av native-bibliotekene som er brukt er rettet mot onion routing, eller forenkler konseptet for oss.
+
 
 ## Hvordan teste ut programvaren
 Det er tre måter å kjøre programvaren på. Metode #1 og #2 krever kun Docker. Siste er å kjøre go-filene selv, da må man
