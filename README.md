@@ -82,11 +82,11 @@ Her forklarer vi hva som skjer når en bruker sender inn en lenke den ønsker å
 1. Brukeren sender inn en lenke via en POST-forespørsel til routeren (web-tjeneren)
 2. Routeren velger ut tre tilfeldige noder (av de tilgjengelige som har koblet seg til)
 3. Routeren pakker så denne lenken og nodene den skal sendes gjennom i flere lag:
-   1. Routeren oppretter en Payload-instans og setter lenken inn i Content-feltet og lar NextNode-feltet være tomt.
-   2. Den JSON-formaterer så denne Payload-instansen og krypterer dette igjen med node#3 (siste) sin symmetriske nøkkel.
-   3. Den oppretter så en ny Payload-instans, putter byte-arrayen fra steg 2 inn i Content-feltet og setter NextNode
-      feltet til å være Node#3 sin adresse.
-   4. Steg ii. og iii. gjentas to ganger til, bare med Node#2 og Node#1 sine nøkler og adresser.
+    1. Routeren oppretter en Payload-instans og setter lenken inn i Content-feltet og lar NextNode-feltet være tomt.
+    2. Den JSON-formaterer så denne Payload-instansen og krypterer dette igjen med node#3 (siste) sin symmetriske nøkkel.
+    3. Den oppretter så en ny Payload-instans, putter byte-arrayen fra steg 2 inn i Content-feltet og setter NextNode
+       feltet til å være Node#3 sin adresse.
+    4. Steg ii. og iii. gjentas to ganger til, bare med Node#2 og Node#1 sine nøkler og adresser.
 4. Routeren sender så det trippelkrypterte payload-instansen til Node#1 i en POST-forespørsel
 5. Node#1 dekrypterer innholdet fra forespørselen den mottar med sin symmetriske nøkkel og parser resultatet fra
    JSON-byte-array til en ny payload-instans. Denne payload-instansen holder adressen til neste node samt den krypterte
@@ -148,9 +148,19 @@ Løsningen er laget utelukkende i native-biblioteket til Go.
 Du kan finne nativ-bibliotekene vi har brukt under "Import" i go filene.
 Ingen av native-bibliotekene som er brukt er rettet mot onion routing, eller forenkler konseptet for oss.
 
-## Kjøre instruksjoner
+## Hvordan teste ut programvaren
 Det er tre måter å kjøre programvaren på. Metode #1 og #2 krever kun Docker. Siste er å kjøre go-filene selv, da må man
 ha installert programmeringsspråket Go.
+
+*Kort om anbefalte spørringer* <br>
+Ved alle måtene anbefaler vi å spørre etter domener som responderer med en enkelt respons. Eksempler på dette er: <br>
+* nginx.org
+* httpbin.org/get
+
+Prøver du en nettside som sender respons i flere runder så er det fullt mulig, men da får du en feilmelding fra routeren fordi vi ikke har implementert håndtering av oppdelte (chunked) http-responser. Tjenesten kommer til å fortsette helt fint, men feilmeldinger kommer opp. Eksempler på dette er: <br>
+
+* facebook.com
+* youtube.com
 
 ### #1 Docker Compose (Docker) - Enklest
 *Avhengighet: Docker*<br>
@@ -166,6 +176,7 @@ Slik gjør du:
 ```console
 $ docker-compose up
 ```
+*(Dette kan ta litt tid første gangen den kjøres. Dette er fordi docker må laste ned Linux-imagene vi bygger våre imager oppå. Ved senere kjøringer er disse cached)* <br>
 Den bygger og kjører alle imagene og du kan nå åpne http://localhost:8080 og teste ut tjenesten.
 I terminalen vil du få alle outputene fra de ulike tjenerne slik at du kan se hvilke noder som faktisk brukes når du
 sender spørringen fra localhost. MERK: Her kjøres både serveren og nodene på samme maskin. Dette gjør det vanskelig å få
