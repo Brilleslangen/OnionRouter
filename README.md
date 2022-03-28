@@ -12,7 +12,7 @@ vi ikke tar i bruk bibliotek for Onion Routing.
 https://github.com/Brilleslangen/OnionRouter
 
 #### Lenke til siste CI/CD
-https://github.com/Brilleslangen/OnionRouter/actions/runs/2049845430
+https://github.com/Brilleslangen/OnionRouter/actions/runs/2049863535
 
 #### Lenke til Docker-images
 https://hub.docker.com/r/nicolaisivesind/onion-router/tags
