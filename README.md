@@ -58,11 +58,11 @@ http-forespørselen som brukeren sendte inn. Hver node starter opp ved å koble 
 *Shared secret* symmetrisk nøkkel til kryptering og dekryptering. Vi forklarer mer om dette under *Krypteringsløsning*
 
 **Payload** <br>
-Dette er en struktur som sendes med en POST-forespørsel mellom webserveren og en nodene, og nodene seg i mellom.
+Dette er en struktur som sendes med en POST-forespørsel mellom webserveren og en node, og nodene seg i mellom.
 Datastrukturen består av to felt:<br>
 * <ins>NextNode</ins> <br> Dette er en streng som holder adressen til neste node<br>
 * <ins>Content</ins> <br>
-  Dette er en byte-array som holder det krypterte innholdet som sendes mellom nodene.
+  Dette er en byte-array som holder det krypterte innholdet som sendes til neste node.
 
 Med unntak av siste node så holder Content-feltet en JSON-formatert og kryptert versjon av Payload-strukturen som
 sendes til neste node. For siste node er NextNode-feltet tomt - det signaliserer til noden at det nå er en link i
@@ -98,20 +98,21 @@ Her forklarer vi hva som skjer når en bruker sender inn en lenke den ønsker å
    med Node#3 sin symmetriske nøkkel, før den sender denne krypterte byte-arrayen tilbake som respons til Node#2.
 9. Node#2 og #1 gjentar prosessen i steg 8, bare med sine egne symmetriske nøkler.
 10. Routeren mottar så responsen fra Node#1, dekrypterer responsen tre ganger - med node#3 sin nøkkel, deretter med Node#2
-    sin nøkkel og så til slutt med Node#3 sin nøkkel.
+    sin nøkkel og så til slutt med Node#1 sin nøkkel.
 11. Responsen er nå helt dekryptert og routeren skriver responsen til nettleseren til brukeren.
 
 ### Krypteringsløsning
-### Fremtidig arbeid
+
+## Fremtidig arbeid
 * **Implementere interaktivitet** <br>
   Siden vi kun viser fram en kopi av responsen, så er ikke nettsiden noe mer interaktiv enn det som følger med i reposnen
   fra GET-forespørselens om gjøres. Det er likevel mulig å trykke på lenker, eller for responsen til å redirigere
   nettleseren til en ny side. Dette er betydelige svakheter - Hvis brukeren sendes til en ekstern lenke, så er det ikke
-  gjennom nodene, men gjennom nettleserend den er inni.
+  gjennom nodene, men gjennom nettleseren den er inni.
 
 * **Implementere HTTPS** <br>
   Vi bruker kun vanlig HTTP, dette betyr at forespørselene kan hijackes av ondsinnede aktører på f.eks samme Wifi.
-  I motsetning til HTTP så oppretter HTTPS en TLS-kobling og sender over krypterte-forespørslene. Innholdet i
+  I motsetning til HTTP så oppretter HTTPS en TLS-kobling og kommuniserer med krypterte forespørsler. Innholdet i
   forespørslene vår er allerede kryptert i løsningen vår, men å oppgradere til HTTPS vil gi oss enda et lag med sikkerhet.
 
 * **Omgjøre tjenesten til en proxy**<br>
@@ -120,18 +121,19 @@ Her forklarer vi hva som skjer når en bruker sender inn en lenke den ønsker å
 
 **Oppsummering av svakhetene**
 1. Tjenestem beskytter ikke mot omdirigeringer som gjør det lett for sider å få direkte kontakt med brukeren.
-2. Den kan kun sende en enkelt GET-forespørsel og resultatet er ikke spesiel brukbart siden den ikke er interaktiv.
+2. Den kan kun sende en enkelt GET-forespørsel og resultatet er ikke spesielt brukbart siden den ikke er interaktiv.
 3. Tjenesten tar ikke i bruk HTTPS.
 
 ### Eksterne avhengigheter
 Løsningen er laget utelukkende i native-biblioteket til Go.
 Du kan finne nativ-bibliotekene vi har brukt under "Import" i go filene.
+Ingen av native-bibliotekene som er brukt er rettet mot onion routing, eller forenkler konseptet for oss.
 
 ## Kjøre instruksjoner
-Det er tre måter å kjøre programvaren på. Metode 1 og 2 krever kun Docker. Siste er å kjøre go-filene selv, da må man
+Det er tre måter å kjøre programvaren på. Metode #1 og #2 krever kun Docker. Siste er å kjøre go-filene selv, da må man
 ha installert programmeringsspråket Go.
 
-### Docker Compose (Docker) - Enklest
+### #1 Docker Compose (Docker) - Enklest
 *Avhengighet: Docker*<br>
 Vi har laget en docker-compose fil. Denne bygger imagene for Router- og Node-tjenerne. Deretter kjører den en instans
 av Router på port 8080 og 5 instanser av noder på portene 8081-8085. <br>
@@ -153,9 +155,11 @@ Slik skal det se ut (Mac-terminal):<br>
 
 https://user-images.githubusercontent.com/70381155/160305552-dcc8906c-4194-446e-8f0f-c5b7a50be6df.mov
 
-### Docker - Kjør tilpassede instanser
+*Hvis du gjør flere forespørsler via web-serveren skal du kunne se i terminalen at det velges tre tilfeldige noder hver gang*
+
+### #2 Docker - Kjør tilpassede instanser
 *Avhengighet: Docker*<br>
-Siden vi har Continous Deployment i repositoryet vårt oppdateres også Docker Imagaene vi lager i Docker Hub fortløpende.
+Siden vi har Continous Deployment i repositoryet vårt oppdateres også Docker Imagene vi lager i Docker Hub fortløpende.
 Du kan derfor kjøre egne Router og Node-instanser rett fra terminalen kun ved å bruke docker og hente images fra Docker
 Hub. Hvis du ønsker å teste noder på ulike maskiner (slik at det er enkelt å foreta en wireshark-analyse) så er dette
 enkleste måten å gjøre det på.
@@ -180,17 +184,17 @@ Hvis noden kjøres på en annen maskin må IP-adressen til maskinen routeren kj�
 Slik skal initialisering og korrekt oppkobling se ut:<br>
 ![init-r-and-n](https://user-images.githubusercontent.com/70381155/160305566-d71b3700-756f-48a0-aa62-c295c9b6692a.png)
 <br>
-Merk at router må initialiseres før noder kan koble til.
+*Merk at router må initialiseres før noder kan koble til.*
 
-**Kjøre en fungerende tjener med Docker**
+**Kjøre en fungerende løsning med Docker**
 1. Initialiser router
 2. Initialiser minst 3 noder på hver sin port. Legg også inn ROUTER_IP enviroment variable dersom router kjøres på
    ekstern maskin.
 3. Gå til ```http://<router-ip>:8080``` og legg inn en URL du ønsker å få vist frem anonymt.
 
-## Kjør med Go
+### #3 Kjør med Go
 *Avhengighet: programmeringsspråket Go*<br>
-Det enkleste er å kjøre med docker, men filene kan også kjøres med go selv.
+Tjenesten kan også kjøres med go selv.
 
 1. Åpne folderet OnionRouter i terminal (dette folderet)
 2. Kjør router:
