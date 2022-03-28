@@ -15,8 +15,8 @@ jobs:
       uses: actions/setup-go@v2
       with:
         go-version: '^1.13.1'
-    - name: Run encryption test
-      run: go test ./ecdh
+    - name: Run tests
+      run: go test ./...
       
 
   build-and-deploy:

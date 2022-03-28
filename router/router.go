@@ -93,7 +93,7 @@ func connectNode(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// sendThroughNodes makes an HTTP-request to the desired URL.
+// sendThroughNodes makes an HTTP-request to the desired through relay-nodes URL.
 func sendThroughNodes(url string) []byte {
 	// Select random nodes and pack payload in encrypted layers
 	selectedNodes, payload, err := selectAndPack(url)
@@ -168,6 +168,6 @@ func unpack(respBody io.ReadCloser, selectedNodes [3]Node) []byte {
 
 func check(err error) {
 	if err != nil {
-		fmt.Println(err)
+		log.Fatalln(err)
 	}
 }

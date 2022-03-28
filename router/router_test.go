@@ -13,7 +13,7 @@ import (
 )
 
 func TestRouter(t *testing.T) {
-	initRouter(6)
+	initRouter()
 
 	// Wait for router and nodes to start
 	// Increase this if the test fails
@@ -47,28 +47,41 @@ func TestRouter(t *testing.T) {
 	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
 
+	killProcesses()
 	// Compare the two bodies
 	if !reflect.DeepEqual(testBody, body) {
 		t.Errorf("FAILED, GOT %x, EXPECTED %x", testBody, body)
 	}
+
 }
 
 // initRouter spins up a router with num nodes to choose from
-func initRouter(num int) {
+func initRouter() {
 	// Initiate router
 	cmd := exec.Command("go", "run", "router/router.go")
 	cmd.Dir = "../"
 	err := cmd.Start()
 	check(err)
+	time.Sleep(1 * time.Second)
 
 	fmt.Println("Router initiated")
 
 	// Initiate num nodes, so the router can choose a random relay-pattern
-	for i := 1; i <= num; i++ {
+	for i := 1; i <= 3; i++ {
 		cmd := exec.Command("go", "run", "node/node.go", "808"+strconv.Itoa(i))
 		cmd.Dir = "../"
 		err := cmd.Start()
 		check(err)
 	}
 	fmt.Println("All instances are running")
+}
+
+func killProcesses() {
+	err := exec.Command("pkill", "router").Run()
+	err = exec.Command("pkill", "node").Run()
+	err = exec.Command("pkill", "node").Run()
+	err = exec.Command("pkill", "node").Run()
+
+	check(err)
+	fmt.Println("All processes killed")
 }

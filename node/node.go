@@ -113,7 +113,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		check(err)
 
 		// Write to response to requesting entity
-
 		_, err = w.Write(encryptedResponse)
 		check(err)
 	} else {
