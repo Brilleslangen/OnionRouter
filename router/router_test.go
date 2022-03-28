@@ -62,7 +62,7 @@ func initRouter() {
 	cmd.Dir = "../"
 	err := cmd.Start()
 	check(err)
-	time.Sleep(10 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	fmt.Println("Router initiated")
 
