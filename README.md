@@ -250,12 +250,12 @@ Vi har lagd noen få tester:
 * Testing av kryptering og dekryptering <br>
 Du kan teste ut denne ved å navigere til folderet ```ecdh``` og kjøre: <br>
 ```console
-$ go test
+$ go test ./ecdh/
 ```
 * Å starte opp en router og et antall noder og sende en request.
 Du kan teste ut denne ved å navigere til folderet ```router``` og kjøre: <br>
 ```console
-$ go test
+$ go test ./router/
 ```
 
 *Vi fikk kun implementert testen av krypteringen i CI-løsningen vår. Dette er ettersom at 
